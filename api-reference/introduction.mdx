@@ -1,33 +1,91 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: API Reference
+description: Complete API documentation for the Urtentic identity verification platform.
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+The Urtentic API provides comprehensive identity verification and workflow management capabilities. It enables organizations to create customized verification workflows, perform identity checks, and manage verification processes.
 
-## Welcome
+## Base URL
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
-
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+```
+https://api.urtentic.com/api/v1
+```
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+All authenticated endpoints require two headers:
+
+```bash
+Authorization: Bearer {API_KEY}
+X-CLIENT-ID: {CLIENT_ID}
+```
+
+<Info>
+API credentials can be generated from your [Urtentic Dashboard](https://app.urtentic.com) under the Integrations page.
+</Info>
+
+| Header | Description |
+|---|---|
+| `Authorization` | Bearer token with your API key |
+| `X-CLIENT-ID` | Your application's client ID |
+
+## API Endpoints Overview
+
+### Verification
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/verifications` | Start a new verification |
+| `GET` | `/verifications/{id}/status` | Get verification status |
+| `POST` | `/verifications/{id}/send-inputs` | Submit verification inputs |
+| `POST` | `/verifications/{id}/validations/{processType}` | Validate inputs before submission |
+
+### Workflow
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/workflows/supported-document-types` | Get all supported document types |
+| `GET` | `/workflows/{id}/document-types` | Get document types for a workflow |
+| `POST` | `/workflows/{id}/email-otp` | Send email OTP |
+
+### Webhook
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/webhooks/configure` | Configure a webhook endpoint |
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+| Status Code | Description |
+|---|---|
+| `200` | Success |
+| `201` | Created |
+| `204` | No Content (success, no body) |
+| `400` | Bad Request - invalid input |
+| `401` | Unauthorized - invalid API key |
+| `403` | Forbidden - insufficient permissions |
+| `404` | Not Found |
+| `429` | Rate Limited |
+
+Error responses include a JSON body:
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+{
+  "error": "INVALID_WORKFLOW",
+  "message": "The specified workflow ID is invalid or not found"
+}
 ```
+
+## Rate Limits
+
+<Warning>
+- OTP requests: Maximum 5 per email address per hour
+- Webhook deliveries timeout after 10 seconds
+</Warning>
+
+## Support
+
+- **Email**: [support@urtentic.com](mailto:support@urtentic.com)
+- **Status Page**: [status.urtentic.com](https://status.urtentic.com)

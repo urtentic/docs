@@ -1,0 +1,147 @@
+---
+title: Location Intelligence
+description: Verify user geographic location and analyze network environment to detect fraud and ensure compliance.
+---
+
+## Overview
+
+Location Intelligence provides geographic and network analysis to:
+
+- **Verify Physical Location**: Confirm user's geographic location using device data
+- **Detect VPNs and Proxies**: Identify users attempting to mask their true location
+- **Risk Assessment**: Analyze location patterns for fraud detection
+- **Compliance Enforcement**: Ensure users are in permitted geographic regions
+
+## Configuration Options
+
+### Location Restrictions
+
+Choose how to handle unsupported locations:
+
+| Type | User Experience | Use Case |
+|---|---|---|
+| **Invisible Restriction** | No feedback provided | Compliance tracking without impacting flow |
+| **Visible without Blocking** | Warning shown, user can continue | Soft compliance with user choice |
+| **Visible with Blocking** | Location not supported message | Hard compliance enforcement |
+
+### Security Features
+- **VPN Restriction**: Block users using VPNs
+- **IP Geolocation**: Restrict based on IP location
+- **High Accuracy Check**: Use GPS, Wi-Fi, Bluetooth (vs IP-only)
+
+```json
+{
+  "settings": [
+    { "fieldName": "LOCATION_RESTRICTION", "value": "VISIBLE_WITH_BLOCKING" },
+    { "fieldName": "RESTRICT_VPN", "value": true },
+    { "fieldName": "RESTRICT_IP_GEOLOCATION", "value": ["US", "CA", "GB"] },
+    { "fieldName": "HIGH_ACCURACY_CHECK", "value": true }
+  ]
+}
+```
+
+## API Integration
+
+### Submit Device and Location Data
+
+**Endpoint:** `POST /api/v1/verifications/{verificationId}/send-inputs`
+
+```bash
+curl -X POST https://api.urtentic.com/api/v1/verifications/{verificationId}/send-inputs \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}" \
+  -F 'inputs=[{"fieldName":"DEVICE_DATA","value":"{\"userAgent\":\"Mozilla/5.0\",\"timezone\":\"America/New_York\",\"language\":\"en-US\",\"platform\":\"MacIntel\",\"gpsLocation\":{\"latitude\":37.7749,\"longitude\":-122.4194,\"accuracy\":10}}","type":"TEXT"}]'
+```
+
+### Verification Results
+
+```json
+{
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "status": "COMPLETED",
+  "steps": [
+    {
+      "stepId": "LOCATION_INTELLIGENCE",
+      "status": 1,
+      "data": {
+        "source_of_address": "GPS",
+        "address_line": "123 Main Street",
+        "city": "San Francisco",
+        "province": "California",
+        "zip_code": "94102",
+        "country": "United States",
+        "ip_safety": "SAFE"
+      }
+    }
+  ]
+}
+```
+
+### JavaScript Helper
+
+Collect device data before sending to your backend:
+
+```javascript
+navigator.geolocation.getCurrentPosition((position) => {
+  const deviceData = {
+    userAgent: navigator.userAgent,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    language: navigator.language,
+    platform: navigator.platform,
+    gpsLocation: {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracy: position.coords.accuracy
+    }
+  };
+  // Send to your backend to call the API
+  console.log(JSON.stringify(deviceData));
+});
+```
+
+### Webhook Notification
+
+```json
+{
+  "eventName": "step_completed",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "timeStamp": "2024-01-10T10:31:00.000Z",
+  "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "metadata": { "userId": "user_12345" },
+  "id": "LOCATION_INTELLIGENCE",
+  "status": 1,
+  "data": {
+    "source_of_address": "GPS",
+    "address_line": "123 Main Street",
+    "city": "San Francisco",
+    "province": "California",
+    "zip_code": "94102",
+    "country": "United States",
+    "ip_safety": "SAFE"
+  }
+}
+```
+
+## Implementation Tips
+
+<AccordionGroup>
+  <Accordion title="Privacy & Permissions">
+    - Request GPS permission only when needed
+    - Explain why location verification is required
+    - Handle permission denials gracefully
+    - Delete location data after verification
+  </Accordion>
+  <Accordion title="Technical Implementation">
+    - Combine IP and GPS data when available
+    - Handle GPS timeout/unavailability scenarios
+    - Validate device data format before submission
+    - Use appropriate VPN detection sensitivity
+  </Accordion>
+  <Accordion title="User Experience">
+    - Show clear messages for location restrictions
+    - Provide fallback options when GPS unavailable
+    - Handle VPN users with helpful guidance
+    - Display location verification progress clearly
+  </Accordion>
+</AccordionGroup>

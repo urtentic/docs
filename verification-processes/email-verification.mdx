@@ -1,0 +1,135 @@
+---
+title: Email Verification
+description: Validate email address ownership through OTP delivery and risk assessment to ensure legitimate email addresses.
+---
+
+## Overview
+
+Email verification provides email validation through:
+
+- **Ownership Verification**: Confirm users own the email address via OTP
+- **Risk Assessment**: Analyze email addresses for fraud indicators
+- **Deliverability Testing**: Verify email addresses can receive messages
+
+## Configuration
+
+```json
+{
+  "settings": [
+    { "fieldName": "EMAIL_COMPANY_NAME", "value": "Your Company Name" },
+    { "fieldName": "EMAIL_RISK_THRESHOLD", "value": 75 }
+  ]
+}
+```
+
+## Verification Process
+
+<Steps>
+  <Step title="Email Address Input">
+    User provides their email address
+  </Step>
+  <Step title="Risk Analysis & OTP Delivery">
+    System analyzes email and sends verification code automatically
+  </Step>
+  <Step title="OTP Verification">
+    User enters the received verification code to complete verification
+  </Step>
+</Steps>
+
+## API Integration
+
+### Step 1: Submit Email Address
+
+**Endpoint:** `POST /api/v1/verifications/{verificationId}/send-inputs`
+
+```bash
+curl -X POST https://api.urtentic.com/api/v1/verifications/{verificationId}/send-inputs \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}" \
+  -F 'inputs=[{"fieldName":"EMAIL_ADDRESS","value":"user@example.com","type":"TEXT"}]'
+```
+
+<Info>
+After submitting the email address, an OTP is automatically sent to the provided email. The user must enter this code to complete verification.
+</Info>
+
+### Step 2: (Optional) Resend OTP Code
+
+```javascript
+const otpResponse = await fetch(`/api/v1/workflows/${workflowId}/email-otp`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'X-CLIENT-ID': CLIENT_ID,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ key: "user@example.com" })
+});
+
+if (otpResponse.status === 204) {
+  console.log("OTP sent successfully");
+}
+```
+
+### Step 3: Get Verification Results
+
+**Endpoint:** `GET /api/v1/verifications/{verificationId}`
+
+```json
+{
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "status": "COMPLETED",
+  "steps": [
+    {
+      "stepId": "EMAIL_CHECK",
+      "status": 1,
+      "data": {
+        "risk_score": 15,
+        "verification_status": "VERIFIED"
+      }
+    }
+  ]
+}
+```
+
+### Webhook Notification
+
+```json
+{
+  "eventName": "step_completed",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "timeStamp": "2024-01-10T10:32:00.000Z",
+  "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "metadata": { "userId": "user_12345" },
+  "id": "EMAIL_CHECK",
+  "status": 1,
+  "data": {
+    "risk_score": 15,
+    "verification_status": "VERIFIED"
+  }
+}
+```
+
+## Implementation Tips
+
+<AccordionGroup>
+  <Accordion title="User Experience">
+    - Explain the verification process before starting
+    - Show clear feedback when OTP is sent
+    - Make OTP input fields mobile-friendly
+    - Provide resend option with rate limiting
+  </Accordion>
+  <Accordion title="Security & Compliance">
+    - Handle rate limiting errors gracefully (429 responses)
+    - Set appropriate OTP expiration times
+    - Log verification attempts for audit purposes
+    - Obtain proper consent for email communications
+  </Accordion>
+  <Accordion title="Technical Implementation">
+    - Validate email format client-side before submission
+    - Handle email delivery failures with retry logic
+    - Check spam folders if delivery appears delayed
+    - Implement proper timeout handling for OTP requests
+  </Accordion>
+</AccordionGroup>

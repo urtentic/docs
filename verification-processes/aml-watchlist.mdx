@@ -1,0 +1,146 @@
+---
+title: AML & Watchlist Screening
+description: Cross-reference individuals against international sanctions lists to meet regulatory requirements and prevent financial crimes.
+---
+
+## Overview
+
+Watchlist screening provides compliance checks through:
+
+- **Sanctions Screening**: Check against OFAC, EU, UN sanctions lists
+- **Automated Processing**: Uses extracted data from document verification
+- **Risk Assessment**: Identifies potential matches for review
+
+## Screening Lists
+
+| List | Authority | Description |
+|---|---|---|
+| **OFAC** | United States Treasury Department | U.S. OFAC watchlist screening |
+| **EU** | European Union | EU sanctions list screening |
+| **UN** | United Nations | UN sanctions list screening |
+
+## Configuration
+
+```json
+{
+  "settings": [
+    {
+      "fieldName": "STANDARD_WATCHLIST",
+      "value": ["OFAC", "EU", "UN"]
+    }
+  ]
+}
+```
+
+## Process Dependencies
+
+<Warning>
+**Document Verification** must be completed first to extract name data for screening.
+</Warning>
+
+<Info>
+Watchlist screening automatically uses the name extracted from the `DOCUMENT_VERIFICATION` process. No additional inputs are required. The process runs automatically after document verification is completed.
+</Info>
+
+## API Integration
+
+### Trigger Watchlist Screening
+
+**Endpoint:** `POST /api/v1/verifications/{verificationId}/send-inputs`
+
+```bash
+curl -X POST https://api.urtentic.com/api/v1/verifications/{verificationId}/send-inputs \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}" \
+  -F 'inputs=[]'
+```
+
+### Response (No Match Found)
+
+```json
+{
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "status": "COMPLETED",
+  "steps": [
+    {
+      "stepId": "WATCHLIST",
+      "status": 1,
+      "data": {
+        "full_name": "John Smith",
+        "match_found": false
+      }
+    }
+  ]
+}
+```
+
+### Response (Match Found - Requires Review)
+
+```json
+{
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "status": "NEEDS_REVIEW",
+  "steps": [
+    {
+      "stepId": "WATCHLIST",
+      "status": 2,
+      "data": {
+        "full_name": "John Smith",
+        "match_found": true
+      }
+    }
+  ]
+}
+```
+
+### Webhook Notifications
+
+<Tabs>
+  <Tab title="No Match">
+    ```json
+    {
+      "eventName": "step_completed",
+      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+      "timeStamp": "2024-01-10T10:33:00.000Z",
+      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+      "metadata": { "userId": "user_12345" },
+      "id": "WATCHLIST",
+      "status": 1,
+      "data": { "full_name": "John Smith", "match_found": false }
+    }
+    ```
+  </Tab>
+  <Tab title="Match Found">
+    ```json
+    {
+      "eventName": "step_completed",
+      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+      "timeStamp": "2024-01-10T10:33:00.000Z",
+      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+      "metadata": { "userId": "user_12345" },
+      "id": "WATCHLIST",
+      "status": 2,
+      "data": { "full_name": "John Smith", "match_found": true }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Tips
+
+<AccordionGroup>
+  <Accordion title="Compliance & Risk Management">
+    - Set up manual review processes for all matches found
+    - Maintain audit trails for regulatory compliance
+    - Implement escalation procedures for positive matches
+    - Keep screening records per regulatory requirements
+  </Accordion>
+  <Accordion title="Technical Implementation">
+    - Ensure document verification completes before watchlist screening
+    - Handle screening service timeouts gracefully
+    - Log all screening attempts with timestamps
+    - Protect sensitive screening results with appropriate access controls
+  </Accordion>
+</AccordionGroup>

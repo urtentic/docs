@@ -1,0 +1,1475 @@
+openapi: 3.0.0
+x-stoplight:
+  id: 41d4f22ee491a
+info:
+  title: Urtentic API
+  version: '1.0'
+  description: |
+    # Introduction
+    The Urtentic API provides comprehensive identity verification and workflow management capabilities. 
+    It enables organizations to create customized verification workflows, perform identity checks, 
+    and manage verification processes with features including liveness detection, 
+    location intelligence, and document verification.
+
+    ## Authentication
+    All authenticated endpoints require two headers:
+    - `Authorization: Bearer {API_KEY}` - Your API key
+    - `X-CLIENT-ID: {CLIENT_ID}` - Your client ID
+
+    API credentials can be generated from your Urtentic Dashboard under Settings > API Keys.
+
+    ## Webhook Notifications
+    Configure webhook URLs in your Urtentic Dashboard to receive real-time notifications
+    about verification status changes. Webhooks include the verification ID and current status,
+    allowing your system to react to verification completions or failures.
+
+    ## Key Features
+    - User and organization management
+    - Customizable verification workflows
+    - Multiple verification processes (Liveness, Location, Document, Watchlist Check, Email)
+    - Analytics and reporting
+    - Webhook notifications for verification results
+  contact:
+    name: Urtentic Support Team
+    email: support@urtentic.com
+    url: 'https://urtentic.com/support'
+  termsOfService: 'https://urtentic.com/terms'
+  license:
+    name: Urtentic License
+    url: 'https://urtentic.com/license'
+servers:
+  - url: 'https://api.urtentic.com/api/v1'
+    description: Urtentic API
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        API key for authentication. Pass as Bearer token in Authorization header.
+        Generate API keys from your Urtentic Dashboard under Settings > API Keys.
+
+        Example:
+        ```
+        Authorization: Bearer {your-api-key}
+        ```
+    clientIdAuth:
+      type: apiKey
+      in: header
+      name: X-CLIENT-ID
+      description: |
+        Client ID for authentication. Required alongside the Bearer token.
+
+        Example:
+        ```
+        X-CLIENT-ID: {your-client-id}
+        ```
+  schemas:
+    FieldValue:
+      type: object
+      description: |
+        Configuration value for a verification field. These configurations control 
+        validation rules, appearance, and behavior for different verification processes.
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier for the field value
+          example: 12345
+        createdAt:
+          type: string
+          format: date-time
+          description: When the field value was created
+          example: '2023-06-15T14:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the field value was last updated
+          example: '2023-06-15T14:30:00Z'
+        deletedAt:
+          type: string
+          format: date-time
+          description: When the field value was deleted (if applicable)
+          example: '2023-06-15T14:30:00Z'
+        value:
+          type: string
+          description: Value of the field
+          example: 'true'
+        fileName:
+          type: string
+          description: Name of associated file (if applicable)
+          example: 'passport_front.jpg'
+        fieldName:
+          type: string
+          enum:
+            - SELFIE_VIDEO
+            - DEVICE_DATA
+            - BIOMETRICS
+            - LOCATION_RESTRICTION
+            - RESTRICT_VPN
+            - RESTRICT_IP_GEOLOCATION
+            - HIGH_ACCURACY_CHECK
+            - GALLERY_RESTRICTION
+            - RESTRICT_SCREENSHOT
+            - RESTRICT_AGE
+            - DUPLICATE_DETECTION
+            - FACEMATCH_THRESHOLD
+            - DOCUMENT_TYPES
+            - FRONT_IMAGE
+            - DOCUMENT_TYPE
+            - DOCUMENT_PHOTO
+            - BACK_IMAGE
+            - EMAIL_ADDRESS
+            - OTP_CODE
+            - EMAIL_COMPANY_NAME
+            - EMAIL_RISK_THRESHOLD
+          description: |
+            Name of the configuration field. Available fields:
+            
+            **Liveness Detection**
+            - SELFIE_VIDEO: Video capture for liveness detection
+            - BIOMETRICS: Biometric data extraction settings
+            
+            **Environment Checks**
+            - DEVICE_DATA: Device information collection
+            - LOCATION_RESTRICTION: Geographic restrictions
+            - RESTRICT_VPN: Whether to block VPN usage
+            - RESTRICT_IP_GEOLOCATION: IP-based geolocation rules
+            - HIGH_ACCURACY_CHECK: Enhanced accuracy for location checks
+            
+            **Security Features**
+            - GALLERY_RESTRICTION: Prevent using photos from gallery
+            - RESTRICT_SCREENSHOT: Block screenshots during verification
+            - RESTRICT_AGE: Age verification thresholds
+            - DUPLICATE_DETECTION: Settings for detecting duplicate submissions
+            - FACEMATCH_THRESHOLD: Minimum confidence score for face matching
+            
+            **Document Verification**
+            - DOCUMENT_TYPES: Allowed document types
+            - FRONT_IMAGE: Front image of document
+            - DOCUMENT_TYPE: Type of identification document
+            - DOCUMENT_PHOTO: Photo extracted from document
+            - BACK_IMAGE: Back image of document
+            
+            **Email Verification**
+            - EMAIL_ADDRESS: Email to verify
+            - OTP_CODE: One-time password code
+            - EMAIL_COMPANY_NAME: Company name for email communications
+            - EMAIL_RISK_THRESHOLD: Risk threshold for email verification
+          example: 'SELFIE_VIDEO'
+        type:
+          type: string
+          description: Type of the field value (e.g., BOOLEAN, STRING, NUMBER)
+          example: 'BOOLEAN'
+        country:
+          type: string
+          maxLength: 3
+          description: ISO 3166-1 alpha-3 country code (if applicable)
+          example: 'USA'
+        page:
+          type: string
+          enum:
+            - FRONT
+            - BACK
+            - NONE
+          default: NONE
+          description: |
+            Page association for the field:
+            - FRONT: Front page/side of document
+            - BACK: Back page/side of document
+            - NONE: Not page-specific
+          example: 'FRONT'
+        data:
+          type: array
+          description: Additional field data options
+          items:
+            $ref: '#/components/schemas/FieldData'
+          example:
+            - value: 'true'
+              label: 'Enable Restriction'
+              description: 'Prevent using the device gallery during verification'
+    FieldData:
+      type: object
+      description: |
+        Data item for field configuration. These are used to provide options
+        for dropdown fields, radio buttons, and other input types.
+      required:
+        - value
+        - label
+        - description
+      properties:
+        value:
+          type: string
+          description: Value of the data item
+          example: 'PASSPORT'
+        label:
+          type: string
+          description: Human-readable label
+          example: 'International Passport'
+        description:
+          type: string
+          description: Detailed description of the data item
+          example: 'Standard international travel document with photo identification'
+    VerificationRequest:
+      type: object
+      description: |
+        Request to start a new verification process. This initiates a verification
+        workflow for a user and returns the verification configuration.
+      required:
+        - flowId
+      properties:
+        flowId:
+          type: string
+          format: uuid
+          description: ID of the workflow to be executed
+          example: 40f85c69-b27a-46e8-9115-691401acb5df
+        metadata:
+          type: object
+          description: |
+            Additional data to be associated with the verification. This information
+            is stored with the verification record and can be used for tracking,
+            correlation, or custom business logic.
+            
+            Common metadata fields:
+            - reference: Your internal reference ID
+            - email: User's email address
+            - userId: Your system's user identifier
+            - deviceId: Device identifier
+            - ipAddress: User's IP address (automatically captured if not provided)
+            - redirectUrl: URL to redirect users after verification (if using redirect flows)
+          example:
+            email: user@example.com
+            reference: USER123
+            customerId: CUST-456
+            deviceId: D-789012
+          additionalProperties: true
+      x-stoplight:
+        id: kjb8e3th3etyy
+      example:
+        flowId: 40f85c69-b27a-46e8-9115-691401acb5df
+        metadata:
+          email: user@example.com
+          reference: USER123
+          customerId: CUST-456
+          deviceId: D-789012
+    ValidatorError:
+      type: object
+      description: |
+        Validation error details. These errors are returned when input validation
+        fails during verification processes.
+      properties:
+        fieldName:
+          type: string
+          description: Name of the field with validation error
+          example: 'SELFIE_VIDEO'
+        message:
+          type: string
+          description: Error message describing the validation failure
+          example: 'Poor lighting detected in selfie video'
+        errorCode:
+          type: string
+          description: |
+            Error code for programmatic handling. Common error codes:
+            
+            **General Errors**
+            - MISSING_FIELD: Required field is missing
+            - INVALID_FORMAT: Field has incorrect format
+            
+            **Document Errors**
+            - DOCUMENT_EXPIRED: Document is expired
+            - DOCUMENT_QUALITY: Image quality is insufficient
+            - DOCUMENT_MISMATCH: Document type doesn't match selected type
+            - DOCUMENT_TAMPERED: Signs of document tampering detected
+            
+            **Liveness Errors**
+            - POOR_LIGHTING: Inadequate lighting for liveness verification
+            - MULTIPLE_FACES: Multiple faces detected in selfie
+            - FACE_MISMATCH: Face doesn't match document photo
+            - REPLAY_ATTACK: Potential replay attack detected
+            
+            **Location Errors**
+            - VPN_DETECTED: VPN or proxy detected
+            - LOCATION_RESTRICTED: User in restricted location
+            - LOCATION_MISMATCH: Location doesn't match expected location
+            
+            **Email Errors**
+            - INVALID_EMAIL: Email address format is invalid
+            - EMAIL_RISK_HIGH: Email associated with high risk score
+            - OTP_INVALID: One-time password is incorrect
+          example: 'POOR_LIGHTING'
+      example:
+        fieldName: 'SELFIE_VIDEO'
+        message: 'Poor lighting detected in selfie video'
+        errorCode: 'POOR_LIGHTING'
+    StartVerificationResponse:
+      type: object
+      description: |
+        Response returned when starting a new verification. This contains
+        all the information needed to guide the user through the verification
+        process.
+      properties:
+        metadata:
+          type: object
+          description: Additional metadata associated with the verification
+          additionalProperties:
+            type: string
+          example:
+            email: user@example.com
+            reference: USER123
+        flowId:
+          type: string
+          format: uuid
+          description: Unique identifier of the workflow being used
+          example: 40f85c69-b27a-46e8-9115-691401acb5df
+        identityId:
+          type: string
+          format: uuid
+          description: Unique identifier for the identity being verified
+          example: 32a5b2d6-7c9e-4815-a599-fd03d6b34c53
+        verificationId:
+          type: string
+          format: uuid
+          description: Unique identifier for this verification attempt
+          example: 85c94e71-6e3f-4a19-b15c-781d8a876542
+        ipAddress:
+          type: string
+          description: IP address from which the verification was initiated
+          example: 192.168.1.1
+        inputs:
+          type: array
+          description: List of required input fields for the verification
+          items:
+            $ref: '#/components/schemas/Field'
+          example:
+            - fieldName: SELFIE_VIDEO
+              description: A short video of your face for liveness detection
+              group: 1
+              fieldType: FILE
+              optional: false
+            - fieldName: DOCUMENT_TYPE
+              description: Select your ID document type
+              group: 2
+              fieldType: DROPDOWN
+              data:
+                options: [PASSPORT, DRIVERS_LICENSE, NATIONAL_ID]
+              optional: false
+        settings:
+          type: array
+          description: List of configuration settings for the verification
+          items:
+            $ref: '#/components/schemas/FieldValue'
+          example:
+            - id: 123
+              createdAt: '2023-06-15T14:30:00Z'
+              updatedAt: '2023-06-15T14:30:00Z'
+              value: 'true'
+              fieldName: GALLERY_RESTRICTION
+              type: BOOLEAN
+      x-stoplight:
+        id: dis8te1fnhnbh
+    Field:
+      type: object
+      description: |
+        Defines an input field required for verification. These fields
+        represent the data that must be collected from the user during
+        the verification process.
+      required:
+        - fieldName
+        - fieldType
+      properties:
+        fieldName:
+          type: string
+          description: |
+            Name of the field. Common field names include:
+            - SELFIE_VIDEO: Video capture for liveness detection
+            - DOCUMENT_TYPE: Type of identification document
+            - FRONT_IMAGE: Front image of document
+            - BACK_IMAGE: Back image of document (if applicable)
+            - EMAIL_ADDRESS: Email address for verification
+            - OTP_CODE: One-time password for email verification
+          example: SELFIE_VIDEO
+        description:
+          type: string
+          description: Human-readable description of the field
+          example: A short video of your face for liveness detection
+        group:
+          type: integer
+          description: |
+            Group number for organizing related fields. Fields in the same
+            group are typically displayed together in the verification UI.
+          example: 1
+        fieldType:
+          type: string
+          description: |
+            Type of the field. Available types:
+            - FILE: File upload field
+            - TEXT: Text input field
+            - NUMBER: Numeric input field
+            - DROPDOWN: Dropdown selection field
+            - RADIO: Radio button selection
+            - CHECKBOX: Checkbox field
+            - DATE: Date input field
+          example: FILE
+        data:
+          type: object
+          description: |
+            Additional data associated with the field, such as
+            options for dropdown fields or validation rules.
+          example:
+            options: [PASSPORT, DRIVERS_LICENSE, NATIONAL_ID]
+        optional:
+          type: boolean
+          description: Whether this field is optional
+          default: false
+          example: false
+      x-stoplight:
+        id: bx35scssyyd06
+    DocumentType:
+      type: object
+      description: |
+        Information about a supported identity document type. This schema
+        defines the properties and structure of document types that can
+        be used for verification.
+      properties:
+        name:
+          type: string
+          description: |
+            Internal identifier for the document type. Common document types:
+            - PASSPORT: International passport
+            - DRIVERS_LICENSE: Driver's license
+            - NATIONAL_ID: National ID card
+            - RESIDENCE_PERMIT: Residence permit
+            - VOTER_ID: Voter identification card
+          example: PASSPORT
+        label:
+          type: string
+          description: Human-readable name of the document type
+          example: International Passport
+        sides:
+          type: array
+          description: |
+            List of required document sides/pages. Some documents
+            require only the front side (like passports), while others
+            require both front and back sides (like driver's licenses).
+          items:
+            type: string
+            enum:
+              - FRONT
+              - BACK
+          example:
+            - FRONT
+        subTypes:
+          type: array
+          description: |
+            List of country-specific subtypes for this document.
+            Different countries may have different document formats
+            or requirements for the same document type.
+          items:
+            $ref: '#/components/schemas/SubDocumentType'
+          example: []
+      example:
+        name: PASSPORT
+        label: International Passport
+        sides:
+          - FRONT
+        subTypes: []
+    SubDocumentType:
+      type: object
+      description: |
+        Country-specific document type information. This provides
+        details for documents that vary in format or requirements
+        based on the issuing country.
+      properties:
+        countryName:
+          type: string
+          description: Name of the country
+          example: Nigeria
+        countryCode:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+          example: NG
+        countryFlag:
+          type: string
+          description: Country flag representation (emoji or URL)
+          example: "\U0001F1F3\U0001F1EC"
+        region:
+          type: string
+          description: Geographic region of the country
+          example: Africa
+        documentTypes:
+          type: array
+          description: List of document types available for this country
+          items:
+            $ref: '#/components/schemas/DocumentType'
+          default: []
+          example: []
+      example:
+        countryName: Nigeria
+        countryCode: NG
+        countryFlag: "🇳🇬"
+        region: Africa
+        documentTypes: []
+paths:
+  /workflows/supported-document-types:
+    get:
+      summary: Get Supported Document Types
+      tags:
+        - Workflow
+      security: []
+      description: |
+        Retrieves all supported document types for identity verification. This endpoint
+        returns a list of document types that can be used in verification workflows,
+        including their labels and which sides (front/back) are required.
+        
+        ### Use Cases
+        - Populating document type selection dropdowns in your application
+        - Determining which document types are available for verification
+        - Checking which sides need to be captured for each document type
+        
+        ### Notes
+        - This endpoint doesn't require authentication
+        - The response includes all globally supported document types
+        - For country-specific document types, use the `/workflows/{workflowId}/document-types` endpoint
+      responses:
+        '200':
+          description: List of supported document types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentType'
+              examples:
+                response:
+                  value:
+                    - name: PASSPORT
+                      label: International Passport
+                      sides:
+                        - FRONT
+                      subTypes: []
+                    - name: DRIVERS_LICENSE
+                      label: Driver's License
+                      sides:
+                        - FRONT
+                        - BACK
+                      subTypes: []
+                    - name: NATIONAL_ID
+                      label: National ID Card
+                      sides:
+                        - FRONT
+                        - BACK
+                      subTypes: []
+      operationId: get-supported-document-types
+      x-stoplight:
+        id: 3m36wr4t3lvon
+  '/workflows/{workflowId}/document-types':
+    parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: |
+          Unique identifier of the workflow.
+          This is the ID of the verification workflow you've configured in the Urtentic Dashboard.
+        example: 40f85c69-b27a-46e8-9115-691401acb5df
+      - name: countryCode
+        in: query
+        required: true
+        schema:
+          type: string
+        description: |
+          ISO 3166-1 alpha-2 country code to filter document types.
+          Only document types available for the specified country will be returned.
+        example: US
+      - name: step
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+        description: |
+          Workflow step index. This corresponds to the step in your multi-step
+          verification workflow where document selection occurs.
+        example: 0
+    get:
+      summary: Get Document Types By WorkflowId
+      tags:
+        - Workflow
+      security: []
+      description: |
+        Retrieves document types configured for a specific workflow, country, and step.
+        This endpoint returns a filtered list of document types based on the workflow
+        configuration and the specified country.
+        
+        ### Use Cases
+        - Displaying available document types for a specific country
+        - Showing country-specific document subtypes
+        - Adapting your UI based on the document requirements for a country
+        
+        ### Notes
+        - This endpoint doesn't require authentication
+        - The response is filtered based on workflow configuration
+        - Only document types supported for the specified country are returned
+        - The step parameter allows targeting a specific verification step
+      responses:
+        '200':
+          description: List of configured document types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentType'
+              examples:
+                response:
+                  value:
+                    - name: DRIVERS_LICENSE
+                      label: Driver's License
+                      sides:
+                        - FRONT
+                        - BACK
+                      subTypes:
+                        - countryName: United States
+                          countryCode: US
+                          countryFlag: 🇺🇸
+                          region: North America
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                invalid_country:
+                  value:
+                    error: INVALID_COUNTRY_CODE
+                    message: The country code 'XX' is not valid
+        '404':
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                workflow_not_found:
+                  value:
+                    error: WORKFLOW_NOT_FOUND
+                    message: The specified workflow could not be found
+      operationId: get-workflow-document-types
+      x-stoplight:
+        id: xo6oj6cz8e8pe
+  '/workflows/{workflowId}/email-otp':
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: workflowId
+        in: path
+        required: true
+        description: Unique identifier of the workflow
+        example: 40f85c69-b27a-46e8-9115-691401acb5df
+    post:
+      summary: Send Workflow Email OTP
+      tags:
+        - Workflow
+      security:
+        - apiKeyAuth: []
+      description: |
+        Sends a one-time password via email to verify the user's email address as part of the workflow.
+        This is typically used during the EMAIL_CHECK verification process.
+        
+        ### Use Cases
+        - Email verification during user onboarding
+        - Confirming a user's email address before completing verification
+        - Adding an extra layer of authentication to the verification process
+        
+        ### Notes
+        - The OTP code is valid for 10 minutes
+        - Maximum 5 OTP requests per email address per hour
+        - Email templates can be customized in the Urtentic Dashboard
+      responses:
+        '204':
+          description: |
+            OTP email sent successfully. No content is returned in the response body.
+      operationId: post-workflows-workflowId-email-otp
+      x-stoplight:
+        id: gbt71hdu2nfcf
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key:
+                  type: string
+                  description: |
+                    The email address or identifier to send the OTP to.
+                    This should be the user's email address that will receive the verification code.
+                  example: "user@example.com"
+              required:
+                - key
+            examples:
+              request:
+                value:
+                  key: "user@example.com"
+        description: |
+          Request body containing the email address to send the OTP to.
+  /verifications:
+    post:
+      tags:
+        - Verification
+      security:
+        - apiKeyAuth: []
+      summary: Start verification
+      description: |
+        Initiates a new verification process using a specified workflow.
+        The API key must have sufficient permissions to start verifications.
+        Metadata can be included to track custom information throughout the verification process.
+        
+        ### Use Cases
+        - Starting a new user verification process
+        - Creating a verification session for your application
+        - Configuring a verification flow with custom metadata
+        
+        ### Notes
+        - This endpoint requires an API key with verification creation permissions
+        - The flowId must correspond to a workflow configured in your Urtentic account
+        - Metadata fields are optional but recommended for tracking and correlation
+        - The response includes all required input fields and settings for the verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationRequest'
+            examples:
+              request:
+                value:
+                  flowId: "40f85c69-b27a-46e8-9115-691401acb5df"
+                  metadata:
+                    email: "user@example.com"
+                    reference: "USER123"
+                    customerId: "CUST-456"
+                    deviceId: "D-789012"
+      responses:
+        '200':
+          description: Verification started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartVerificationResponse'
+              examples:
+                response:
+                  value:
+                    metadata:
+                      email: "user@example.com"
+                      reference: "USER123"
+                    flowId: "40f85c69-b27a-46e8-9115-691401acb5df"
+                    identityId: "32a5b2d6-7c9e-4815-a599-fd03d6b34c53"
+                    verificationId: "85c94e71-6e3f-4a19-b15c-781d8a876542"
+                    ipAddress: "192.168.1.1"
+                    inputs:
+                      - fieldName: "SELFIE_VIDEO"
+                        description: "A short video of your face for liveness detection"
+                        group: 1
+                        fieldType: "FILE"
+                        optional: false
+                      - fieldName: "DOCUMENT_TYPE"
+                        description: "Select your ID document type"
+                        group: 2
+                        fieldType: "DROPDOWN"
+                        data:
+                          options: ["PASSPORT", "DRIVERS_LICENSE", "NATIONAL_ID"]
+                        optional: false
+                    settings:
+                      - id: 123
+                        createdAt: "2023-06-15T14:30:00Z"
+                        updatedAt: "2023-06-15T14:30:00Z"
+                        value: "true"
+                        fieldName: "GALLERY_RESTRICTION"
+                        type: "BOOLEAN"
+        '400':
+          description: Invalid workflow ID or metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                invalid_workflow:
+                  value:
+                    error: "INVALID_WORKFLOW"
+                    message: "The specified workflow ID is invalid or not found"
+        '401':
+          description: Invalid API key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                invalid_api_key:
+                  value:
+                    error: "INVALID_API_KEY"
+                    message: "The provided API key is invalid or expired"
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                insufficient_permissions:
+                  value:
+                    error: "INSUFFICIENT_PERMISSIONS"
+                    message: "Your API key does not have permission to create verifications"
+      x-stoplight:
+        id: 4vn3wk2ln2x4g
+      operationId: post-verification
+  '/verifications/{verificationId}/send-inputs':
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: verificationId
+        in: path
+        required: true
+        description: |
+          Unique identifier of the verification.
+          This is the verificationId returned when starting a verification.
+        example: "85c94e71-6e3f-4a19-b15c-781d8a876542"
+    post:
+      tags:
+        - Workflow
+      security: []
+      summary: Send verification inputs
+      description: |
+        Submits verification inputs (documents, selfie, etc.) for processing.
+        Supports multipart form data for file uploads.
+        
+        ### Use Cases
+        - Uploading document images for verification
+        - Submitting selfie videos for liveness detection
+        - Providing user information for verification processes
+        
+        ### Notes
+        - This endpoint accepts multipart/form-data to handle file uploads
+        - The "inputs" field must be a JSON string defining the uploaded files and their roles
+        - Multiple files can be uploaded in a single request
+        - Files should be referenced by their filename in the inputs JSON
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs:
+                  type: string
+                  format: json
+                  description: |
+                    JSON array of input definitions that map files to specific field types.
+                    Each object in the array should define:
+                    - fieldName: The type of input (e.g., SELFIE_VIDEO, FRONT_IMAGE)
+                    - value: The filename or value for the field
+                    - fileName: The filename for file uploads (should match the uploaded file name)
+                  example: |
+                    [
+                      {
+                        "fileName": "selfie.mp4",
+                        "fieldName": "SELFIE_VIDEO",
+                        "value": "selfie.mp4"
+                      },
+                      {
+                        "fieldName": "DOCUMENT_TYPE",
+                        "value": "PASSPORT"
+                      },
+                      {
+                        "fileName": "passport_front.jpg",
+                        "fieldName": "FRONT_IMAGE",
+                        "value": "passport_front.jpg"
+                      }
+                    ]
+                documents:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: |
+                    Document files to be processed. Multiple files can be uploaded with this field.
+                    The filenames should match the values in the "inputs" JSON.
+            encoding:
+              documents:
+                contentType: application/octet-stream
+              inputs:
+                contentType: application/json
+            examples:
+              multipart_request:
+                value:
+                  inputs: |
+                    [
+                      {
+                        "fileName": "selfie.mp4",
+                        "fieldName": "SELFIE_VIDEO",
+                        "value": "selfie.mp4"
+                      },
+                      {
+                        "fieldName": "DOCUMENT_TYPE",
+                        "value": "PASSPORT"
+                      },
+                      {
+                        "fileName": "passport_front.jpg",
+                        "fieldName": "FRONT_IMAGE",
+                        "value": "passport_front.jpg"
+                      }
+                    ]
+                  documents: ["(binary file data)"]
+      responses:
+        '200':
+          description: Inputs received and processing started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message
+                    example: "Inputs received and processing started"
+                  status:
+                    type: string
+                    description: Current status of the verification
+                    example: "PROCESSING"
+                  inputsAccepted:
+                    type: array
+                    description: List of accepted input fields
+                    items:
+                      type: string
+                    example: ["SELFIE_VIDEO", "DOCUMENT_TYPE", "FRONT_IMAGE"]
+              examples:
+                success:
+                  value:
+                    message: "Inputs received and processing started"
+                    status: "PROCESSING"
+                    inputsAccepted: ["SELFIE_VIDEO", "DOCUMENT_TYPE", "FRONT_IMAGE"]
+        '400':
+          description: Invalid inputs or missing required files
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+                  missingInputs:
+                    type: array
+                    items:
+                      type: string
+              examples:
+                missing_files:
+                  value:
+                    error: "MISSING_REQUIRED_FILES"
+                    message: "One or more required files are missing"
+                    missingInputs: ["BACK_IMAGE"]
+        '404':
+          description: Verification not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                verification_not_found:
+                  value:
+                    error: "VERIFICATION_NOT_FOUND"
+                    message: "The specified verification ID was not found"
+      x-stoplight:
+        id: sgkyozgto61e1
+      operationId: post-send-verification-inputs
+  '/verifications/{verificationId}/validations/{processType}':
+    parameters:
+      - name: verificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: |
+          Unique identifier of the verification.
+          This is the verificationId returned when starting a verification.
+        example: "85c94e71-6e3f-4a19-b15c-781d8a876542"
+      - name: processType
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            - LIVENESS
+            - DOCUMENT_VERIFICATION
+            - LOCATION_INTELLIGENCE
+            - EMAIL_CHECK
+        description: |
+          Type of verification process to validate.
+          - LIVENESS: Validates selfie video for liveness detection
+          - DOCUMENT_VERIFICATION: Validates document images and data
+          - LOCATION_INTELLIGENCE: Validates location and environment data
+          - EMAIL_CHECK: Validates email verification inputs
+        example: "DOCUMENT_VERIFICATION"
+    post:
+      summary: Validate Verification Process
+      tags:
+        - Verification
+      security:
+        - apiKeyAuth: []
+      description: |
+        Validates inputs for a specific verification process type without actually submitting them.
+        This allows clients to pre-validate document uploads and field values before formal submission, 
+        identifying any errors or missing requirements early in the process.
+        
+        ### Use Cases
+        - Validating document quality before submission
+        - Checking for errors in verification inputs
+        - Testing selfie videos for lighting and quality issues
+        - Verifying that all required inputs are present
+        
+        ### Notes
+        - This endpoint uses the same input format as the submission endpoint
+        - The validation is specific to the process type specified in the URL
+        - Returns an empty array if validation passes
+        - Returns detailed error information if validation fails
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                documents:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: |
+                    Document files to validate. These should match the file types
+                    expected for the specified process type.
+                inputs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/FieldValue'
+                  description: |
+                    Field values to validate. These should include all required
+                    fields for the specified process type.
+            examples:
+              document_validation:
+                value:
+                  documents: ["(binary file data)"]
+                  inputs: [
+                    {
+                      "fieldName": "DOCUMENT_TYPE",
+                      "value": "PASSPORT"
+                    },
+                    {
+                      "fieldName": "FRONT_IMAGE",
+                      "fileName": "passport_front.jpg",
+                      "value": "passport_front.jpg"
+                    }
+                  ]
+      responses:
+        '200':
+          description: Empty array when no validation errors are found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ValidatorError'
+              examples:
+                no_errors:
+                  value: []
+        '400':
+          description: List of validation errors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ValidatorError'
+              examples:
+                validation_errors:
+                  value:
+                    - fieldName: "SELFIE_VIDEO"
+                      message: "Poor lighting detected in selfie video"
+                      errorCode: "POOR_LIGHTING"
+                    - fieldName: "FRONT_IMAGE"
+                      message: "Document is blurry or unclear"
+                      errorCode: "DOCUMENT_QUALITY"
+        '404':
+          description: Verification not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                verification_not_found:
+                  value:
+                    error: "VERIFICATION_NOT_FOUND"
+                    message: "The specified verification ID was not found"
+      operationId: post-verifications-verificationId-validations-processType
+      x-stoplight:
+        id: ojcklstk5huw4
+  '/verifications/{verificationId}/status':
+    parameters:
+      - name: verificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: |
+          Unique identifier of the verification.
+        example: "85c94e71-6e3f-4a19-b15c-781d8a876542"
+    get:
+      summary: Get Verification Status
+      tags:
+        - Verification
+      security:
+        - apiKeyAuth: []
+      description: |
+        Retrieves the current status of a verification process. This endpoint
+        allows you to check the progress and results of an ongoing or completed
+        verification.
+        
+        ### Use Cases
+        - Polling for verification completion
+        - Checking verification results
+        - Determining if additional inputs are needed
+        - Retrieving verification outcome details
+        
+        ### Notes
+        - This endpoint requires an API key with verification read permissions
+        - Status updates may take time to process depending on the verification type
+        - For real-time updates, configure webhooks instead of polling this endpoint
+      responses:
+        '200':
+          description: Verification status information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verificationId:
+                    type: string
+                    format: uuid
+                    description: Unique identifier for the verification
+                    example: "85c94e71-6e3f-4a19-b15c-781d8a876542"
+                  status:
+                    type: string
+                    description: |
+                      Current status of the verification:
+                      - PENDING: Verification has been created but not started
+                      - INITIATED: Verification has started but inputs are pending
+                      - PROCESSING: Inputs received and verification is in progress
+                      - COMPLETED: Verification completed successfully
+                      - FAILED: Verification failed
+                      - ABANDONED: Verification was abandoned by the user
+                      - EXPIRED: Verification session expired
+                    example: "COMPLETED"
+                  result:
+                    type: string
+                    description: |
+                      Result of the verification (if completed):
+                      - APPROVED: Verification passed all checks
+                      - DECLINED: Verification failed one or more checks
+                      - MANUAL_REVIEW: Verification requires manual review
+                    example: "APPROVED"
+                  completedAt:
+                    type: string
+                    format: date-time
+                    description: When the verification was completed
+                    example: "2023-06-15T15:30:00Z"
+                  steps:
+                    type: array
+                    description: Status of individual verification steps
+                    items:
+                      type: object
+                      properties:
+                        processType:
+                          type: string
+                          example: "DOCUMENT_VERIFICATION"
+                        status:
+                          type: string
+                          example: "COMPLETED"
+                        result:
+                          type: string
+                          example: "APPROVED"
+                        completedAt:
+                          type: string
+                          format: date-time
+                          example: "2023-06-15T15:25:00Z"
+                  missingInputs:
+                    type: array
+                    description: List of inputs that are still required
+                    items:
+                      type: string
+                    example: []
+              examples:
+                completed_verification:
+                  value:
+                    verificationId: "85c94e71-6e3f-4a19-b15c-781d8a876542"
+                    status: "COMPLETED"
+                    result: "APPROVED"
+                    completedAt: "2023-06-15T15:30:00Z"
+                    steps:
+                      - processType: "DOCUMENT_VERIFICATION"
+                        status: "COMPLETED"
+                        result: "APPROVED"
+                        completedAt: "2023-06-15T15:25:00Z"
+                      - processType: "LIVENESS"
+                        status: "COMPLETED"
+                        result: "APPROVED"
+                        completedAt: "2023-06-15T15:28:00Z"
+                    missingInputs: []
+                pending_verification:
+                  value:
+                    verificationId: "85c94e71-6e3f-4a19-b15c-781d8a876542"
+                    status: "INITIATED"
+                    result: "null"
+                    completedAt: "2023-06-15T15:30:00Z"
+                    steps:
+                      - processType: "DOCUMENT_VERIFICATION"
+                        status: "PENDING"
+                        result: "null"
+                        completedAt: "2023-06-15T15:30:00Z"
+                    missingInputs: ["FRONT_IMAGE", "BACK_IMAGE"]
+        '404':
+          description: Verification not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                verification_not_found:
+                  value:
+                    error: "VERIFICATION_NOT_FOUND"
+                    message: "The specified verification ID was not found"
+      operationId: get-verification-status
+  '/webhooks/configure':
+    post:
+      summary: Configure Webhook Endpoint
+      tags:
+        - Webhook
+      security:
+        - apiKeyAuth: []
+      description: |
+        Configures a webhook endpoint to receive verification event notifications.
+        This allows your application to receive real-time updates when verification
+        statuses change.
+        
+        ### Use Cases
+        - Setting up real-time verification notifications
+        - Configuring webhook endpoints for your application
+        - Specifying which events should trigger notifications
+        
+        ### Notes
+        - This endpoint requires an API key with webhook configuration permissions
+        - The webhook URL must be publicly accessible and support HTTPS
+        - Webhooks are signed using a secret to verify authenticity
+        - Webhook requests will time out after 10 seconds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: |
+                    The HTTPS URL that will receive webhook notifications
+                  example: "https://example.com/webhooks/urtentic"
+                secret:
+                  type: string
+                  description: |
+                    Secret key used to sign webhook payloads for verification.
+                    If not provided, a random secret will be generated.
+                  example: "whsec_8fJ9LKps6YtG3xZD7N2W"
+                events:
+                  type: array
+                  description: |
+                    List of events to subscribe to. If empty, all events will be sent.
+                  items:
+                    type: string
+                    enum:
+                      - verification.created
+                      - verification.updated
+                      - verification.completed
+                      - verification.failed
+                      - document.verified
+                      - liveness.verified
+                      - email.verified
+                      - location.verified
+                  example: ["verification.completed", "verification.failed"]
+                active:
+                  type: boolean
+                  description: |
+                    Whether this webhook endpoint is active. Defaults to true.
+                  default: true
+                  example: true
+            examples:
+              webhook_config:
+                value:
+                  url: "https://example.com/webhooks/urtentic"
+                  secret: "whsec_8fJ9LKps6YtG3xZD7N2W"
+                  events: ["verification.completed", "verification.failed"]
+                  active: true
+      responses:
+        '201':
+          description: Webhook endpoint configured successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique identifier for the webhook configuration
+                    example: "wh_7dJ9LKps6YtG3xZD7N2W"
+                  url:
+                    type: string
+                    format: uri
+                    example: "https://example.com/webhooks/urtentic"
+                  secret:
+                    type: string
+                    example: "whsec_8fJ9LKps6YtG3xZD7N2W"
+                  events:
+                    type: array
+                    items:
+                      type: string
+                    example: ["verification.completed", "verification.failed"]
+                  active:
+                    type: boolean
+                    example: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2023-06-15T14:30:00Z"
+              examples:
+                success:
+                  value:
+                    id: "wh_7dJ9LKps6YtG3xZD7N2W"
+                    url: "https://example.com/webhooks/urtentic"
+                    secret: "whsec_8fJ9LKps6YtG3xZD7N2W"
+                    events: ["verification.completed", "verification.failed"]
+                    active: true
+                    createdAt: "2023-06-15T14:30:00Z"
+        '400':
+          description: Invalid webhook configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                invalid_url:
+                  value:
+                    error: "INVALID_WEBHOOK_URL"
+                    message: "Webhook URL must use HTTPS protocol"
+      operationId: post-configure-webhook
+tags:
+  - name: Identity
+    description: |
+      Management of verified identity data, including retrieval and validation of identity information.
+      
+      Endpoints in this category allow you to:
+      - Retrieve verified identity details
+      - Check identity verification status
+      - Update identity information
+      - Link identities across verification sessions
+  - name: Processes
+    description: |
+      Configuration and management of individual verification process types that can be used in workflows.
+      
+      The Urtentic platform supports these verification processes:
+      - **Document Verification**: OCR and authenticity checks for identity documents
+      - **Liveness Detection**: Confirms a person is physically present and not using photos/videos
+      - **Location Intelligence**: Verifies geographic location and environments
+      - **Email Verification**: Validates email ownership through OTP
+      - **Watchlist Check**: Screens identities against compliance databases
+  - name: Verification
+    description: |
+      Core verification operations including starting verifications, submitting verification data, and retrieving results.
+      
+      Key operations include:
+      - Starting new verification sessions
+      - Submitting identity data for verification
+      - Retrieving verification results
+      - Validating inputs before submission
+      - Tracking verification status
+  - name: Webhook
+    description: |
+      Configuration and management of webhook endpoints for receiving real-time event notifications.
+      
+      The webhook system allows you to:
+      - Receive real-time notifications about verification status changes
+      - Configure multiple webhook endpoints for different environments
+      - Specify which events trigger notifications
+      - Verify webhook signature to ensure authenticity
+      - Track webhook delivery and retry failed deliveries
+  - name: Workflow
+    description: |
+      Creation and management of verification workflows, combining multiple verification processes into customized sequences.
+      
+      Workflows allow you to:
+      - Define multi-step verification sequences
+      - Configure country-specific document requirements
+      - Set custom verification rules and thresholds
+      - Create specialized flows for different use cases
+      - Manage verification process order and dependencies

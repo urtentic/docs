@@ -1,0 +1,122 @@
+---
+title: Video Agreement
+description: Collect verbal consent from users through recorded video statements with optional biometric verification.
+---
+
+## Overview
+
+Video Agreement verification combines legal consent collection with identity verification through:
+
+- **Verbal Consent Recording**: Capture users reading and agreeing to terms via video
+- **Audio Transcription**: Convert spoken words to text for legal documentation
+- **Face Matching**: Optional biometric comparison with document photos
+- **Multi-language Support**: Agreements in English, French, and Russian
+
+## Configuration
+
+```json
+{
+  "settings": [
+    {
+      "fieldName": "SCRIPT",
+      "value": "I acknowledge and agree to the terms and conditions of this service."
+    },
+    { "fieldName": "LANGUAGE", "value": "EN" },
+    { "fieldName": "TEXT_MATCHING_STRICTNESS", "value": 0.80 },
+    { "fieldName": "FACE_MATCH", "value": true }
+  ]
+}
+```
+
+## Supported Languages
+
+| Language | Code | Speech Recognition |
+|---|---|---|
+| English | `EN` | Native English ASR |
+| French | `FR` | Native French ASR |
+| Russian | `RU` | Native Russian ASR |
+
+## API Integration
+
+### Submit Video Agreement
+
+**Endpoint:** `POST /api/v1/verifications/{verificationId}/send-inputs`
+
+```bash
+curl -X POST https://api.urtentic.com/api/v1/verifications/{verificationId}/send-inputs \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}" \
+  -F 'inputs=[{"fieldName":"VIDEO_AGREEMENT","fileName":"agreement_video.mp4","type":"FILE"}]' \
+  -F 'documents=@/path/to/agreement_video.mp4'
+```
+
+### Verification Results
+
+```json
+{
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "status": "COMPLETED",
+  "steps": [
+    {
+      "stepId": "VIDEO_AGREEMENT",
+      "status": 1,
+      "data": {
+        "face_match": "MATCHED",
+        "audio_transcript": "I acknowledge and agree to the terms and conditions of this service."
+      }
+    }
+  ]
+}
+```
+
+<Info>
+- **Face Matching**: If enabled in workflow settings, the system compares the video face with the first ID document photo
+- **Multi-language**: Configure the script language (EN, FR, RU) in workflow settings before recording
+</Info>
+
+### Webhook Notification
+
+```json
+{
+  "eventName": "step_completed",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "timeStamp": "2024-01-10T10:32:00.000Z",
+  "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "metadata": { "userId": "user_12345" },
+  "id": "VIDEO_AGREEMENT",
+  "status": 1,
+  "data": {
+    "face_match": "MATCHED",
+    "audio_transcript": "I acknowledge and agree to the terms and conditions of this service."
+  }
+}
+```
+
+## Process Dependencies
+
+**Optional Data Source:**
+- **Liveness**: Can use liveness photo for face comparison
+
+## Implementation Tips
+
+<AccordionGroup>
+  <Accordion title="User Experience">
+    - Show script preview before recording starts
+    - Provide step-by-step recording guidance
+    - Allow multiple recording attempts
+    - Give clear feedback on text matching results
+  </Accordion>
+  <Accordion title="Legal & Compliance">
+    - Have legal team review all agreement scripts
+    - Ensure scripts meet local jurisdiction requirements
+    - Maintain recordings per legal retention requirements
+    - Handle multilingual agreements appropriately
+  </Accordion>
+  <Accordion title="Technical Implementation">
+    - Validate audio/video quality before upload
+    - Compress videos appropriately (max 100MB recommended)
+    - Handle microphone permission denials
+    - Set reasonable recording time limits (30-120 seconds)
+  </Accordion>
+</AccordionGroup>

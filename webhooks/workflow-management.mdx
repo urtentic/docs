@@ -1,0 +1,66 @@
+---
+title: Workflow Management
+description: Create customized verification sequences that combine multiple verification processes to meet your business requirements.
+---
+
+## What are Workflows?
+
+A workflow is a configurable sequence of verification steps that users must complete to verify their identity. Each workflow can include multiple verification processes.
+
+## Key Benefits
+
+<CardGroup cols={2}>
+  <Card title="Customizable Logic" icon="sliders">
+    Configure verification requirements per country or region with custom fraud detection thresholds
+  </Card>
+  <Card title="Flexible Sequencing" icon="arrows-rotate">
+    Arrange verification steps in any order with conditional and parallel processing
+  </Card>
+  <Card title="Global Compliance" icon="globe">
+    Adapt workflows to local regulations with support for 195+ countries
+  </Card>
+  <Card title="Analytics & Monitoring" icon="chart-line">
+    Real-time performance metrics, conversion tracking, and detailed audit trails
+  </Card>
+</CardGroup>
+
+## Process Types
+
+| Process Type | Description | Typical Use Case |
+|---|---|---|
+| `DOCUMENT_VERIFICATION` | Verify government-issued documents | KYC onboarding |
+| `LIVENESS` | Selfie video with liveness detection | Anti-spoofing protection |
+| `LOCATION_INTELLIGENCE` | Geographic and IP verification | Fraud prevention |
+| `EMAIL_CHECK` | Email ownership verification | Account verification |
+| `WATCHLIST_CHECK` | Sanctions and PEP screening | Compliance requirements |
+
+## Configuration Settings
+
+Each process can be customized with:
+
+- **Document Types**: Which documents to accept (passport, driver's license, etc.)
+- **Geographic Restrictions**: Allowed/blocked countries or regions
+- **Security Levels**: Liveness detection sensitivity, document authenticity thresholds
+- **User Experience**: UI customization, branding, language preferences
+
+## Metadata & Tracking
+
+Workflows support custom metadata for:
+- User correlation and tracking
+- Business logic integration
+- Compliance audit trails
+- A/B testing different configurations
+
+## Workflow States
+
+Workflows progress through several states during execution:
+
+| State | Description |
+|---|---|
+| `CREATED` | Workflow instance created but not started |
+| `INITIATED` | User began the verification process |
+| `IN_PROGRESS` | User is actively completing verification steps |
+| `COMPLETED` | All required steps completed successfully |
+| `FAILED` | One or more verification steps failed |
+| `ABANDONED` | User left the process incomplete |
+| `EXPIRED` | Workflow session timed out |

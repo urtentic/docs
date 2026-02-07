@@ -1,0 +1,87 @@
+---
+title: Key Concepts
+description: Understand the key concepts and terminology used throughout the Urtentic platform.
+---
+
+Before diving into the technical details, it's important to understand the key concepts and terminology used throughout the Urtentic platform.
+
+## Organizations
+
+An organization represents your company or entity within the Urtentic platform. Each organization can have multiple users with different roles and permissions.
+
+## Users
+
+Users are individuals who have access to your organization's Urtentic dashboard. Users can have different roles:
+
+| Role | Access Level |
+|---|---|
+| **Owner** | Full access to all features and settings |
+| **Admin** | Can manage workflows, verifications, and users |
+| **User** | Limited access based on assigned permissions |
+
+## Workflows
+
+A workflow is a customized sequence of verification processes that defines how identity verification should be performed. Workflows can be tailored to specific use cases and compliance requirements.
+
+## Verification Processes
+
+Verification processes are the individual components that make up a workflow:
+
+<CardGroup cols={2}>
+  <Card title="Liveness Detection" icon="face-viewfinder">
+    Verifies that the person is physically present and not using photos, videos, or masks to spoof the system.
+  </Card>
+  <Card title="Document Verification" icon="id-card">
+    Validates identity documents such as passports, ID cards, and driver's licenses, checking for authenticity and extracting information.
+  </Card>
+  <Card title="Location Intelligence" icon="location-dot">
+    Validates the user's location and detects VPN usage to prevent location spoofing.
+  </Card>
+  <Card title="Email Verification" icon="envelope">
+    Validates the user's email address through one-time password verification.
+  </Card>
+  <Card title="Video Agreement" icon="video">
+    Collects verbal consent from users through recorded video statements, with optional face matching and audio transcription.
+  </Card>
+  <Card title="AML & Watchlist Screening" icon="magnifying-glass">
+    Screens individuals against global sanctions lists (OFAC, EU, UN), PEP databases, and adverse media sources.
+  </Card>
+</CardGroup>
+
+## Verifications
+
+A verification is an instance of a workflow being executed for a specific individual. Each verification has a unique identifier and status.
+
+## Verification Status
+
+Verifications can have the following statuses:
+
+| Status | Description |
+|---|---|
+| `STARTED` | Verification has been initiated |
+| `RUNNING` | Verification is in progress |
+| `SUCCESS` | Verification completed successfully |
+| `REJECTED` | Verification failed due to detected issues |
+| `NEEDS_REVIEW` | Verification requires manual review |
+| `ABANDONED` | Verification was abandoned before completion |
+
+## Identities
+
+An identity represents a verified individual within the system. Multiple verifications can be associated with a single identity.
+
+## Webhooks
+
+Webhooks allow your application to receive real-time notifications about verification events, such as when a verification is completed or requires review.
+
+## API Keys
+
+API keys are used to authenticate requests to the Urtentic API. Each API key consists of two components:
+
+<Info>
+Both keys are required for API authentication. Keep your API Secret secure and never expose it in client-side code.
+</Info>
+
+| Component | Header | Description |
+|---|---|---|
+| **Public Key (Client ID)** | `X-CLIENT-ID` | Used to identify your application |
+| **Private Key (API Secret)** | `Authorization: Bearer` | Used to authenticate API requests |

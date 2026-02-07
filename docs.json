@@ -1,68 +1,92 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Urtentic Documentation",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#255CFF",
+    "light": "#4D7AFF",
+    "dark": "#1A3DB8"
   },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart",
-              "development"
+              "getting-started",
+              "key-concepts"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Verification Processes",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "verification-processes/document-verification",
+              "verification-processes/liveness",
+              "verification-processes/location-intelligence",
+              "verification-processes/email-verification",
+              "verification-processes/video-agreement",
+              "verification-processes/aml-watchlist"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Webhooks",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "webhooks/overview",
+              "webhooks/configuration",
+              "webhooks/workflow-management",
+              "webhooks/integration"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "SDK Integration",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "sdk/introduction",
+              "sdk/web/getting-started",
+              "sdk/direct-link/getting-started"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "API Documentation",
             "pages": [
               "api-reference/introduction"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Endpoints",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              {
+                "openapi": "GET /verifications/{verificationId}/status"
+              },
+              {
+                "openapi": "POST /verifications"
+              },
+              {
+                "openapi": "POST /verifications/{verificationId}/send-inputs"
+              },
+              {
+                "openapi": "POST /verifications/{verificationId}/validations/{processType}"
+              },
+              {
+                "openapi": "GET /workflows/supported-document-types"
+              },
+              {
+                "openapi": "GET /workflows/{workflowId}/document-types"
+              },
+              {
+                "openapi": "POST /workflows/{workflowId}/email-otp"
+              },
+              {
+                "openapi": "POST /webhooks/configure"
+              }
             ]
           }
         ]
@@ -71,14 +95,14 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "Dashboard",
+          "href": "https://app.urtentic.com",
+          "icon": "gauge"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Support",
+          "href": "mailto:support@urtentic.com",
+          "icon": "envelope"
         }
       ]
     }
@@ -91,32 +115,21 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@urtentic.com"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://app.urtentic.com"
     }
   },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
+  "openapi": "api-reference/openapi.yml",
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "x": "https://x.com/urtentic",
+      "github": "https://github.com/urtentic",
+      "linkedin": "https://linkedin.com/company/urtentic"
     }
   }
 }

@@ -1,0 +1,203 @@
+---
+title: Document Verification
+description: Validate government-issued identity documents through OCR data extraction, authenticity checks, and security feature analysis.
+---
+
+## Walkthrough Video
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/QzJQGe5bo-A"
+  title="Document Verification Walkthrough"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+/>
+
+## Overview
+
+The document verification process analyzes identity documents such as passports, driver's licenses, and national ID cards to:
+
+- **Extract personal information** using advanced OCR technology
+- **Verify document authenticity** through security feature detection
+- **Detect tampering or forgery** using machine learning algorithms
+- **Validate document integrity** and format compliance
+
+## Supported Document Types
+
+Urtentic supports identity documents from 195+ countries and territories:
+
+<CardGroup cols={2}>
+  <Card title="Passports" icon="passport">
+    All standard ICAO-compliant passports
+  </Card>
+  <Card title="National ID Cards" icon="id-card">
+    Government-issued identity cards
+  </Card>
+  <Card title="Driver's Licenses" icon="car">
+    Domestic driving licenses
+  </Card>
+  <Card title="Residence Permits" icon="house">
+    Permanent and temporary residence documents
+  </Card>
+</CardGroup>
+
+## Configuration Options
+
+<AccordionGroup>
+  <Accordion title="Security Settings">
+    - **Gallery Restriction**: Prevent users from uploading photos from gallery
+    - **Screenshot Restriction**: Block screenshots of documents
+    - **Age Restriction**: Set minimum age requirement (18-100)
+    - **Duplicate Detection**: Choose action for duplicate verifications (`REJECTED` / `REVIEW_NEEDED`)
+  </Accordion>
+  <Accordion title="Quality Settings">
+    - **Face Match Threshold**: Minimum confidence for document photo vs selfie matching
+    - **Document Types**: Configure which document types to accept
+  </Accordion>
+</AccordionGroup>
+
+```json
+{
+  "settings": [
+    { "fieldName": "GALLERY_RESTRICTION", "value": true },
+    { "fieldName": "RESTRICT_SCREENSHOT", "value": true },
+    { "fieldName": "RESTRICT_AGE", "value": 18 },
+    { "fieldName": "DUPLICATE_DETECTION", "value": "REJECTED" },
+    { "fieldName": "FACEMATCH_THRESHOLD", "value": 0.85 },
+    { "fieldName": "DOCUMENT_TYPES", "value": ["PASSPORT", "DRIVERS_LICENSE", "NATIONAL_ID"] }
+  ]
+}
+```
+
+## Data Extraction
+
+The system extracts structured data from documents:
+
+| Output | Description |
+|---|---|
+| Full Name | Extracted from document |
+| Date of Birth | Parsed date |
+| Age Check | Boolean age validation |
+| Document Number | Unique document ID |
+| Document Type | PASSPORT, DRIVERS_LICENSE, etc. |
+| Issue/Expiry Dates | Document validity period |
+| Address | Extracted address |
+| Country of Issuance | Issuing country |
+| Nationality | Holder nationality |
+| Template Matching | Authenticity check result |
+| Alteration Detection | Tampering detection result |
+
+## API Integration
+
+### Step 1: Submit Document for Verification
+
+**Endpoint:** `POST /api/v1/verifications/{verificationId}/send-inputs`
+
+```bash
+curl -X POST https://api.urtentic.com/api/v1/verifications/{verificationId}/send-inputs \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}" \
+  -F 'inputs=[{"fieldName":"DOCUMENT_PHOTO","fileName":"passport.jpg","type":"FILE"}]' \
+  -F 'documents=@/path/to/passport.jpg'
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Inputs received successfully",
+  "verificationId": "85c94e71-6e3f-4a19-b15c-781d8a876542"
+}
+```
+
+### Step 2: Get Verification Results
+
+**Endpoint:** `GET /api/v1/verifications/{verificationId}`
+
+```bash
+curl -X GET https://api.urtentic.com/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542 \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}"
+```
+
+**Response:**
+```json
+{
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "status": "COMPLETED",
+  "documentEntities": [
+    {
+      "type": "PASSPORT",
+      "country": "USA",
+      "fields": {
+        "full_name": { "label": "Full Name", "value": "John Smith" },
+        "date_of_birth": { "label": "Date of Birth", "value": "1990-05-15" },
+        "document_number": { "label": "Document Number", "value": "123456789" },
+        "expiry_date": { "label": "Expiry Date", "value": "2030-03-10" },
+        "nationality": { "label": "Nationality", "value": "United States" }
+      }
+    }
+  ]
+}
+```
+
+### Webhook Notification
+
+```json
+{
+  "eventName": "step_completed",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "timeStamp": "2024-01-10T10:31:00.000Z",
+  "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "metadata": { "userId": "user_12345" },
+  "id": "DOCUMENT_VERIFICATION",
+  "status": 1,
+  "data": {
+    "full_name": "John Smith",
+    "date_of_birth": "1990-05-15",
+    "age_check": true,
+    "document_number": "123456789",
+    "document_type": "PASSPORT",
+    "date_of_issue": "2020-03-10",
+    "expiry_date": "2030-03-10",
+    "country_of_issuance": "USA",
+    "nationality": "United States",
+    "sex": "M",
+    "template_matching_result": "PASSED",
+    "alteration_detection_results": "NO_ALTERATIONS_DETECTED"
+  }
+}
+```
+
+## Process Dependencies
+
+Document verification can use data from other processes:
+
+- **Liveness**: Optional face matching with selfie photo
+- **Video Agreement**: Optional face matching with video frame
+
+## Implementation Tips
+
+<AccordionGroup>
+  <Accordion title="User Experience">
+    - Show real-time feedback during document capture
+    - Allow photo retakes for quality issues
+    - Provide clear instructions for document positioning
+    - Explain why document verification is needed
+  </Accordion>
+  <Accordion title="Technical Implementation">
+    - Compress images before upload (max 10MB recommended)
+    - Validate file formats (JPEG, PNG) client-side
+    - Handle network timeouts gracefully
+    - Implement progressive upload for large files
+  </Accordion>
+  <Accordion title="Security & Compliance">
+    - Always use HTTPS for document uploads
+    - Log verification attempts for audit purposes
+    - Set appropriate data retention periods
+    - Restrict access to extracted document data
+  </Accordion>
+</AccordionGroup>

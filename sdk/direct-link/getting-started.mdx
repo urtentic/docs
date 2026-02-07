@@ -1,0 +1,221 @@
+---
+title: Direct Link Integration
+description: The simplest way to integrate Urtentic identity verification by redirecting users to a hosted verification flow.
+---
+
+The Direct Link integration provides the simplest way to integrate Urtentic's identity verification. With minimal development effort, redirect users to a hosted verification flow.
+
+## Overview
+
+Direct Link allows you to redirect users to a secure, hosted verification page where they complete the identity verification process. Once complete, users are redirected back to your application.
+
+## URL Structure
+
+```
+https://verify.urtentic.com/?flowId={FLOW_ID}&clientId={CLIENT_ID}&metadata={METADATA}&redirectUrl={REDIRECT_URL}
+```
+
+### Required Parameters
+
+| Parameter | Description | Example |
+|---|---|---|
+| `flowId` | Your workflow ID from the dashboard | `db50ed08-18fa-41e8-9e46-a44aca39f69d` |
+| `clientId` | Your Urtentic client ID (URL encoded) | `hpUBmWypQfnIRJXslel8JDZtAEHF9PQjbT2eJQjNkXM%3D` |
+
+### Optional Parameters
+
+| Parameter | Description |
+|---|---|
+| `metadata` | JSON object with custom data (URL encoded) |
+| `redirectUrl` | URL to redirect to after verification (URL encoded) |
+
+<Info>
+The `metadata` parameter accepts any JSON object. You can pass any custom data relevant to your application (user IDs, references, session data, etc.). This metadata will be included in all webhook notifications.
+</Info>
+
+## Implementation Examples
+
+### Basic Implementation
+
+<CodeGroup>
+
+```javascript JavaScript
+const flowId = 'db50ed08-18fa-41e8-9e46-a44aca39f69d';
+const clientId = 'hpUBmWypQfnIRJXslel8JDZtAEHF9PQjbT2eJQjNkXM=';
+
+const metadata = {
+  userId: '350ff98e3d934ad4bc5301f4504702d4',
+  userEmail: 'user@example.com',
+  reference: 'REF-12345'
+};
+
+const baseUrl = 'https://verify.urtentic.com/';
+const params = new URLSearchParams({
+  flowId: flowId,
+  clientId: clientId,
+  metadata: JSON.stringify(metadata)
+});
+
+const verificationUrl = `${baseUrl}?${params.toString()}`;
+window.location.href = verificationUrl;
+```
+
+```python Python
+import json
+from urllib.parse import urlencode
+
+flow_id = 'db50ed08-18fa-41e8-9e46-a44aca39f69d'
+client_id = 'hpUBmWypQfnIRJXslel8JDZtAEHF9PQjbT2eJQjNkXM='
+
+metadata = {
+    'userId': '350ff98e3d934ad4bc5301f4504702d4',
+    'userEmail': 'user@example.com',
+    'reference': 'REF-12345'
+}
+
+base_url = 'https://verify.urtentic.com/'
+params = {
+    'flowId': flow_id,
+    'clientId': client_id,
+    'metadata': json.dumps(metadata)
+}
+
+verification_url = f"{base_url}?{urlencode(params)}"
+# return redirect(verification_url)
+```
+
+```php PHP
+<?php
+$flowId = 'db50ed08-18fa-41e8-9e46-a44aca39f69d';
+$clientId = 'hpUBmWypQfnIRJXslel8JDZtAEHF9PQjbT2eJQjNkXM=';
+
+$metadata = [
+    'userId' => '350ff98e3d934ad4bc5301f4504702d4',
+    'userEmail' => 'user@example.com',
+    'reference' => 'REF-12345'
+];
+
+$baseUrl = 'https://verify.urtentic.com/';
+$params = http_build_query([
+    'flowId' => $flowId,
+    'clientId' => $clientId,
+    'metadata' => json_encode($metadata)
+]);
+
+$verificationUrl = $baseUrl . '?' . $params;
+header('Location: ' . $verificationUrl);
+exit;
+?>
+```
+
+```java Java
+String flowId = "db50ed08-18fa-41e8-9e46-a44aca39f69d";
+String clientId = "hpUBmWypQfnIRJXslel8JDZtAEHF9PQjbT2eJQjNkXM=";
+
+Map<String, String> metadata = new HashMap<>();
+metadata.put("userId", "350ff98e3d934ad4bc5301f4504702d4");
+metadata.put("userEmail", "user@example.com");
+
+ObjectMapper mapper = new ObjectMapper();
+String metadataJson = mapper.writeValueAsString(metadata);
+
+String verificationUrl = "https://verify.urtentic.com/?" +
+    "flowId=" + URLEncoder.encode(flowId, StandardCharsets.UTF_8) +
+    "&clientId=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8) +
+    "&metadata=" + URLEncoder.encode(metadataJson, StandardCharsets.UTF_8);
+```
+
+</CodeGroup>
+
+## Handling Redirects
+
+When using `redirectUrl`, users will be redirected to your URL after completing or abandoning the verification:
+
+```
+https://yourapp.com/verification/complete?flowId=db50ed08-...&status=completed
+```
+
+### Redirect Parameters
+
+| Parameter | Description | Possible Values |
+|---|---|---|
+| `flowId` | The workflow ID | Your workflow UUID |
+| `status` | Verification status | `completed`, `abandoned` |
+
+### Example Redirect Handler
+
+<CodeGroup>
+
+```javascript Express.js
+app.get('/verification/complete', (req, res) => {
+  const { flowId, status } = req.query;
+
+  if (status === 'completed') {
+    res.redirect('/dashboard?message=verification-complete');
+  } else if (status === 'abandoned') {
+    res.redirect('/verification?message=verification-abandoned');
+  } else {
+    res.redirect('/');
+  }
+});
+```
+
+```python Flask
+from flask import request, redirect
+
+@app.route('/verification/complete')
+def verification_complete():
+    status = request.args.get('status')
+
+    if status == 'completed':
+        return redirect('/dashboard?message=verification-complete')
+    elif status == 'abandoned':
+        return redirect('/verification?message=verification-abandoned')
+    return redirect('/')
+```
+
+```php PHP
+<?php
+$status = $_GET['status'] ?? '';
+
+if ($status === 'completed') {
+    header('Location: /dashboard?message=verification-complete');
+} elseif ($status === 'abandoned') {
+    header('Location: /verification?message=verification-abandoned');
+} else {
+    header('Location: /');
+}
+exit;
+?>
+```
+
+</CodeGroup>
+
+<Warning>
+The redirect only indicates that the user has returned from the verification flow. For actual verification results and extracted data, always rely on webhook notifications. The redirect is for UX purposes only.
+</Warning>
+
+## Benefits
+
+<CardGroup cols={2}>
+  <Card title="Quick Implementation" icon="rocket">
+    Get up and running in minutes
+  </Card>
+  <Card title="No Frontend Development" icon="wand-magic-sparkles">
+    No need to integrate UI components
+  </Card>
+  <Card title="Automatic Updates" icon="arrows-rotate">
+    Always use the latest verification interface
+  </Card>
+  <Card title="Secure" icon="shield-halved">
+    Hosted on Urtentic's secure infrastructure
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+1. **Always use webhooks** for verification results - don't rely solely on redirects
+2. **Validate redirect parameters** to prevent tampering
+3. **Use HTTPS** for redirect URLs
+4. **Store metadata** that helps you identify the user and verification context
+5. **Handle abandoned verifications** gracefully in your UX

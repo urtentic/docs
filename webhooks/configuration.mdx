@@ -1,0 +1,290 @@
+---
+title: Webhook Configuration
+description: Set up webhook endpoints to receive real-time verification notifications from Urtentic.
+---
+
+## Setting Up Webhooks
+
+<Steps>
+  <Step title="Access Webhook Settings">
+    Log into your Urtentic Dashboard, navigate to **Integrations**, and click **Webhooks**
+  </Step>
+  <Step title="Configure Endpoint">
+    - **Endpoint URL**: Your HTTPS endpoint (e.g., `https://api.yourapp.com/webhooks/urtentic`)
+    - **Secret Key**: Auto-generated or custom webhook secret
+    - **IP Whitelist**: Optional IP address restrictions
+  </Step>
+  <Step title="Test Connection">
+    Click **Test Endpoint**, review the test payload, verify your endpoint responds with HTTP 200, and check signature verification
+  </Step>
+</Steps>
+
+## Implementing Webhook Endpoints
+
+<CodeGroup>
+
+```javascript Node.js
+const express = require('express');
+const crypto = require('crypto');
+const app = express();
+
+app.use('/webhooks/urtentic', express.raw({ type: 'application/json' }));
+
+app.post('/webhooks/urtentic', (req, res) => {
+  const signature = req.headers['x-urtentic-signature'];
+  const timestamp = req.headers['x-urtentic-timestamp'];
+  const payload = req.body;
+
+  try {
+    verifyWebhookSignature(payload, signature, process.env.WEBHOOK_SECRET, timestamp);
+    const event = JSON.parse(payload);
+    handleWebhookEvent(event);
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Webhook verification failed:', error.message);
+    res.status(400).json({ error: 'Webhook verification failed' });
+  }
+});
+
+function verifyWebhookSignature(payload, signature, secret, timestamp) {
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (Math.abs(currentTime - timestamp) > 300) {
+    throw new Error('Webhook timestamp too old');
+  }
+  const secretBytes = Buffer.from(secret, 'base64');
+  const expectedSignature = crypto
+    .createHmac('sha256', secretBytes)
+    .update(payload, 'utf8')
+    .digest('hex');
+  if (signature.startsWith('sha256=')) signature = signature.substring(7);
+  if (!crypto.timingSafeEqual(
+    Buffer.from(signature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  )) {
+    throw new Error('Invalid signature');
+  }
+}
+
+function handleWebhookEvent(event) {
+  switch (event.eventName) {
+    case 'verification_completed':
+      console.log(`Verification completed: ${event.flowId}`);
+      break;
+    case 'verification_abandoned':
+      console.log(`Verification abandoned: ${event.flowId}`);
+      break;
+    case 'step_completed':
+      console.log(`Step completed: ${event.step.stepId}`);
+      break;
+    default:
+      console.log(`Unhandled event: ${event.eventName}`);
+  }
+}
+
+app.listen(3000, () => console.log('Webhook server listening on port 3000'));
+```
+
+```python Python
+import os, hmac, hashlib, json, time, base64
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/webhooks/urtentic', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('x-urtentic-signature')
+    timestamp = request.headers.get('x-urtentic-timestamp')
+    payload = request.get_data()
+
+    try:
+        verify_webhook_signature(payload, signature, os.getenv('WEBHOOK_SECRET'), timestamp)
+        event = json.loads(payload)
+        handle_webhook_event(event)
+        return jsonify({'received': True}), 200
+    except Exception as e:
+        print(f'Webhook verification failed: {str(e)}')
+        return jsonify({'error': 'Webhook verification failed'}), 400
+
+def verify_webhook_signature(payload, signature, secret, timestamp):
+    current_time = int(time.time())
+    if abs(current_time - int(timestamp)) > 300:
+        raise Exception('Webhook timestamp too old')
+    secret_bytes = base64.b64decode(secret)
+    expected_signature = hmac.new(secret_bytes, payload, hashlib.sha256).hexdigest()
+    if signature.startswith('sha256='):
+        signature = signature[7:]
+    if not hmac.compare_digest(signature, expected_signature):
+        raise Exception('Invalid signature')
+
+def handle_webhook_event(event):
+    if event['eventName'] == 'verification_completed':
+        print(f"Verification completed: {event['flowId']}")
+    elif event['eventName'] == 'step_completed':
+        print(f"Step completed: {event['step']['stepId']}")
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=3000)
+```
+
+```php PHP
+<?php
+function handleWebhook() {
+    $signature = $_SERVER['HTTP_X_URTENTIC_SIGNATURE'] ?? '';
+    $timestamp = $_SERVER['HTTP_X_URTENTIC_TIMESTAMP'] ?? '';
+    $payload = file_get_contents('php://input');
+
+    try {
+        verifyWebhookSignature($payload, $signature, $_ENV['WEBHOOK_SECRET'], $timestamp);
+        $event = json_decode($payload, true);
+        handleWebhookEvent($event);
+        http_response_code(200);
+        echo json_encode(['received' => true]);
+    } catch (Exception $e) {
+        error_log('Webhook verification failed: ' . $e->getMessage());
+        http_response_code(400);
+        echo json_encode(['error' => 'Webhook verification failed']);
+    }
+}
+
+function verifyWebhookSignature($payload, $signature, $secret, $timestamp) {
+    $currentTime = time();
+    if (abs($currentTime - intval($timestamp)) > 300) {
+        throw new Exception('Webhook timestamp too old');
+    }
+    $secretBytes = base64_decode($secret);
+    $expectedSignature = hash_hmac('sha256', $payload, $secretBytes);
+    if (strpos($signature, 'sha256=') === 0) $signature = substr($signature, 7);
+    if (!hash_equals($expectedSignature, $signature)) {
+        throw new Exception('Invalid signature');
+    }
+}
+
+function handleWebhookEvent($event) {
+    switch ($event['eventName']) {
+        case 'verification_completed':
+            error_log("Verification completed: {$event['flowId']}");
+            break;
+        case 'step_completed':
+            error_log("Step completed: {$event['step']['stepId']}");
+            break;
+    }
+}
+
+handleWebhook();
+?>
+```
+
+```java Java (Spring Boot)
+@RestController
+public class WebhookController {
+
+    @Value("${urtentic.webhook-secret}")
+    private String webhookSecret;
+
+    @PostMapping("/webhooks/urtentic")
+    public ResponseEntity<Void> handleWebhook(
+            @RequestHeader("x-urtentic-signature") String signature,
+            @RequestHeader("x-urtentic-timestamp") String timestamp,
+            @RequestBody String payload) {
+
+        try {
+            if (!verifySignature(payload, signature, timestamp)) {
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            }
+            Map<String, Object> data = new ObjectMapper().readValue(payload, Map.class);
+            String eventName = (String) data.get("eventName");
+
+            switch (eventName) {
+                case "verification_completed":
+                    log.info("Verification completed: {}", data.get("flowId"));
+                    break;
+                case "step_completed":
+                    log.info("Step completed");
+                    break;
+            }
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private boolean verifySignature(String payload, String signature, String timestampStr) {
+        long timestamp = Long.parseLong(timestampStr);
+        long currentTime = System.currentTimeMillis() / 1000;
+        if (Math.abs(currentTime - timestamp) > 300) return false;
+
+        if (signature.startsWith("sha256=")) signature = signature.substring(7);
+        byte[] secretBytes = Base64.getDecoder().decode(webhookSecret);
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secretBytes, "HmacSHA256"));
+        String expected = bytesToHex(mac.doFinal(payload.getBytes()));
+        return MessageDigest.isEqual(hexToBytes(signature), hexToBytes(expected));
+    }
+}
+```
+
+</CodeGroup>
+
+## Monitoring & Maintenance
+
+### Webhook Health Monitoring
+
+Monitor your webhook endpoint health:
+
+- **Response Times**: Track webhook processing performance
+- **Success Rates**: Monitor delivery success percentages
+- **Error Patterns**: Identify common failure modes
+- **Retry Frequency**: Track how often retries are needed
+
+### Logging Best Practices
+
+<CodeGroup>
+
+```javascript Node.js
+function handleWebhookEvent(event) {
+  const startTime = Date.now();
+  try {
+    console.log(`Processing webhook: ${event.eventName}`);
+    processEvent(event);
+    const duration = Date.now() - startTime;
+    console.log(`Webhook processed successfully (${duration}ms)`);
+  } catch (error) {
+    console.error(`Webhook processing failed:`, error.message);
+    throw error;
+  }
+}
+```
+
+```python Python
+import time, logging
+
+def handle_webhook_event(event):
+    start_time = time.time()
+    try:
+        logging.info(f"Processing webhook: {event['eventName']}")
+        process_event(event)
+        duration = (time.time() - start_time) * 1000
+        logging.info(f"Webhook processed ({duration:.2f}ms)")
+    except Exception as error:
+        logging.error(f"Webhook failed: {error}")
+        raise
+```
+
+</CodeGroup>
+
+### Scaling Considerations
+
+<CardGroup cols={2}>
+  <Card title="Queue Processing" icon="list">
+    Use message queues (RabbitMQ, SQS) for webhook processing
+  </Card>
+  <Card title="Load Balancing" icon="server">
+    Distribute webhook traffic across multiple servers
+  </Card>
+  <Card title="Database Optimization" icon="database">
+    Optimize queries for webhook handlers
+  </Card>
+  <Card title="Caching" icon="bolt">
+    Cache frequently accessed data to improve performance
+  </Card>
+</CardGroup>

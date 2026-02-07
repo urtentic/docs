@@ -1,0 +1,150 @@
+---
+title: Web SDK Integration
+description: Integrate identity verification into your web application with pre-built UI components and a JavaScript API.
+---
+
+The Urtentic Web SDK provides a simple way to integrate identity verification into your web application. It offers pre-built UI components and a JavaScript API to guide users through the verification process.
+
+## Installation
+
+<CodeGroup>
+
+```bash npm
+npm install @urtentic/web-sdk
+```
+
+```bash yarn
+yarn add @urtentic/web-sdk
+```
+
+```html CDN
+<script src="https://cdn.urtentic.com/sdk/latest/urtentic.js"></script>
+```
+
+</CodeGroup>
+
+## Integration Options
+
+The Urtentic Web SDK offers two main integration options:
+
+<CardGroup cols={2}>
+  <Card title="Web Components" icon="puzzle-piece">
+    Pre-built UI components for quick integration with the `<urtentic-button>` element
+  </Card>
+  <Card title="JavaScript API" icon="code">
+    Direct SDK initialization for custom UI implementations with full control
+  </Card>
+</CardGroup>
+
+## Using Web Components
+
+The SDK provides the `<urtentic-button>` web component which creates a customizable verification button.
+
+### Add the Button to Your HTML
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Urtentic Verification Example</title>
+    <script src="https://cdn.urtentic.com/sdk/latest/urtentic.js"></script>
+</head>
+<body>
+    <h1>User Verification</h1>
+
+    <urtentic-button
+        clientId="YOUR_CLIENT_ID"
+        flowId="YOUR_FLOW_ID"
+        metadata='{"userId": "123", "customField": "value"}'>
+    </urtentic-button>
+</body>
+</html>
+```
+
+### Handling Verification Events
+
+```javascript
+const verificationButton = document.querySelector('urtentic-button');
+
+// SDK loaded and ready
+verificationButton.addEventListener('urtentic:loaded', (event) => {
+    console.log('SDK loaded and ready');
+});
+
+// User started the verification process
+verificationButton.addEventListener('urtentic:userStartedSdk', (event) => {
+    console.log('User started verification', event.detail);
+});
+
+// Verification complete
+verificationButton.addEventListener('urtentic:userFinishedSdk', (event) => {
+    console.log('Verification complete', event.detail);
+});
+
+// User exited the verification flow
+verificationButton.addEventListener('urtentic:exitedSdk', (event) => {
+    console.log('User exited verification', event.detail);
+});
+```
+
+## Using the JavaScript API
+
+For more control over the verification flow, use the JavaScript API directly:
+
+```javascript
+Urtentic.init({
+    flowId: 'YOUR_FLOW_ID',
+    clientId: 'YOUR_CLIENT_ID',
+    metadata: '{"userId": "123", "customField": "value"}',
+    redirect: 'https://yoursite.com/success',
+
+    userStartedSdk: (detail) => {
+        console.log('User started verification', detail);
+    },
+    userFinishedSdk: (detail) => {
+        console.log('Verification complete', detail);
+    },
+    exitedSdk: (detail) => {
+        console.log('User exited verification', detail);
+    }
+});
+```
+
+## Configuration Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `clientId` | String | Yes | Your Urtentic client ID |
+| `flowId` | String | Yes | The ID of the verification flow |
+| `metadata` | String | No | JSON string with additional data |
+| `redirect` | String | No | Redirect URL after completion |
+| `userStartedSdk` | Function | No | Callback when user starts verification |
+| `userFinishedSdk` | Function | No | Callback when verification is complete |
+| `exitedSdk` | Function | No | Callback when user exits the flow |
+
+## Customizing the Button
+
+```css
+urtentic-button::part(button) {
+    background-color: #ff5722;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 18px;
+}
+```
+
+## Browser Compatibility
+
+The Urtentic Web SDK is compatible with all modern browsers:
+
+| Browser | Support |
+|---------|---------|
+| Chrome | Latest 2 versions |
+| Firefox | Latest 2 versions |
+| Safari | Latest 2 versions |
+| Edge | Latest 2 versions |
+
+<Note>
+For older browsers, the SDK automatically includes polyfills for Web Components.
+</Note>

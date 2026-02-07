@@ -1,0 +1,92 @@
+---
+title: Integration Guide
+description: Step-by-step guide to creating verification workflows using the Urtentic Dashboard.
+---
+
+## Accessing the Workflow Builder
+
+<Steps>
+  <Step title="Log In">
+    Log into your Urtentic Dashboard
+  </Step>
+  <Step title="Navigate">
+    Go to **Workflows** in the main menu
+  </Step>
+  <Step title="Create">
+    Click **Create New Workflow** to open the workflow builder
+  </Step>
+</Steps>
+
+## Basic Configuration
+
+Start by setting a **Workflow Name** - a descriptive name for internal reference.
+
+## Process Configuration
+
+Drag and drop **Processes** to include in your workflow:
+
+<AccordionGroup>
+  <Accordion title="Document Verification" icon="id-card">
+    **Identifier:** `DOCUMENT_VERIFICATION`
+
+    **Security Settings:**
+    - Gallery Restriction, Screenshot Restriction, Age Restriction, Duplicate Detection
+
+    **Quality Settings:**
+    - Face Match Threshold, Document Types
+
+    **Outputs:** Full Name, Date of Birth, Age check, Document Number, Document type, Issue/Expiry dates, Address, Country, Nationality, Sex, Template matching, Alteration detection
+  </Accordion>
+
+  <Accordion title="Liveness Check" icon="face-viewfinder">
+    **Identifier:** `LIVENESS`
+
+    **Biometric Types:** Passive Liveness, Selfie Video, Selfie Photo
+
+    **Outputs:** Liveness confirmation, Photo of face, Duplicate check via face matching
+
+    **Input Required:** `SELFIE_VIDEO` - Video capture for verification
+  </Accordion>
+
+  <Accordion title="Location Intelligence" icon="location-dot">
+    **Identifier:** `LOCATION_INTELLIGENCE`
+
+    **Location Restrictions:** Invisible, Visible without Blocking, Visible with Blocking
+
+    **Security Features:** VPN Restriction, IP Geolocation, High Accuracy Check
+
+    **Outputs:** Source of Address, Address line, City, Province, Zip Code, Country, IP safety
+
+    **Input Required:** `DEVICE_DATA` - Device information for location verification
+  </Accordion>
+
+  <Accordion title="Email Check" icon="envelope">
+    **Identifier:** `EMAIL_CHECK`
+
+    **Configuration:** Company Name, Risk Threshold
+
+    **Outputs:** Risk score, Verification status
+
+    **Input Required:** `EMAIL_ADDRESS` - Email to verify with OTP
+  </Accordion>
+
+  <Accordion title="Watchlist Check" icon="magnifying-glass">
+    **Identifier:** `WATCHLIST`
+
+    **Screening Options:** OFAC, EU, UN
+
+    **Dependencies:** Requires `DOCUMENT_VERIFICATION` to extract name data
+
+    **Outputs:** Full Name, Match Found status
+  </Accordion>
+
+  <Accordion title="Video Agreement" icon="video">
+    **Identifier:** `VIDEO_AGREEMENT`
+
+    **Configuration:** Script (20-300 chars), Language (EN, FR, RU), Text Matching Strictness, Face Match
+
+    **Dependencies:** Optional `LIVENESS` for face comparison
+
+    **Outputs:** Face Match result, Audio Transcript
+  </Accordion>
+</AccordionGroup>

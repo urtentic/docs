@@ -1,0 +1,494 @@
+---
+title: Getting Started Guide
+description: Walk through integrating the Urtentic API into your application step by step, with practical examples and code samples.
+---
+
+## Prerequisites
+
+Before you begin, you'll need:
+
+1. **Urtentic Account**: Sign up at [urtentic.com](https://app.urtentic.com)
+2. **API Credentials**: Obtain your Client ID and API Secret from the integrations page in your dashboard
+3. **Workflow ID**: Create a verification workflow in your dashboard
+
+### Generate Your API Credentials
+
+<Frame>
+  <img src="/images/screenshots/api-key-generation.png" alt="API Key Generation" />
+</Frame>
+
+Navigate to the integrations page in your dashboard to obtain your API credentials:
+- **Client ID**: Your application identifier (sent via `X-CLIENT-ID` header)
+- **Client Secret**: Your authentication token (sent via `Authorization: Bearer` header)
+
+### Create a Workflow
+
+<Frame>
+  <img src="/images/screenshots/workflow-creation.png" alt="Workflow Creation" />
+</Frame>
+
+Set up your verification workflow by defining the required verification processes.
+
+<Frame>
+  <img src="/images/screenshots/workflow-configuration.png" alt="Workflow Configuration" />
+</Frame>
+
+Configure your workflow settings including document types, verification steps, and security options.
+
+## Quick Start (5 minutes)
+
+### Step 1: Set Up Your Environment
+
+First, set your API credentials as environment variables:
+
+```bash
+export URTENTIC_API_KEY="your-base64-encoded-api-key"
+export URTENTIC_CLIENT_ID="your-base64-encoded-client-id"
+```
+
+### Step 2: Create Your First Verification
+
+```bash
+curl -X POST https://api.urtentic.com/api/v1/verifications \
+  -H "Authorization: Bearer $URTENTIC_API_KEY" \
+  -H "X-CLIENT-ID: $URTENTIC_CLIENT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflowId": "wf_abc123",
+    "metadata": {
+      "userId": "user_12345",
+      "applicationId": "app_67890"
+    }
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": "ver_xyz789",
+  "workflowId": "wf_abc123",
+  "status": "pending",
+  "metadata": {
+    "userId": "user_12345",
+    "applicationId": "app_67890"
+  },
+  "createdAt": "2023-12-01T10:00:00Z",
+  "verificationUrl": "https://verify.urtentic.com/ver_xyz789"
+}
+```
+
+### Step 3: Check Verification Status
+
+```bash
+curl -X GET https://api.urtentic.com/api/v1/verifications/ver_xyz789 \
+  -H "Authorization: Bearer $URTENTIC_API_KEY" \
+  -H "X-CLIENT-ID: $URTENTIC_CLIENT_ID"
+```
+
+## Integration Examples
+
+<CodeGroup>
+
+```javascript Node.js
+const URTENTIC_API_KEY = process.env.URTENTIC_API_KEY;
+const URTENTIC_CLIENT_ID = process.env.URTENTIC_CLIENT_ID;
+const BASE_URL = 'https://api.urtentic.com/api/v1';
+
+// Create a verification
+async function createVerification(workflowId, metadata = {}) {
+  const response = await fetch(`${BASE_URL}/verifications`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${URTENTIC_API_KEY}`,
+      'X-CLIENT-ID': URTENTIC_CLIENT_ID,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ workflowId, metadata })
+  });
+  return await response.json();
+}
+
+// Check verification status
+async function getVerificationStatus(verificationId) {
+  const response = await fetch(`${BASE_URL}/verifications/${verificationId}`, {
+    headers: {
+      'Authorization': `Bearer ${URTENTIC_API_KEY}`,
+      'X-CLIENT-ID': URTENTIC_CLIENT_ID
+    }
+  });
+  return await response.json();
+}
+
+// Usage
+const verification = await createVerification('wf_abc123', { userId: 'user_12345' });
+console.log('Verification URL:', verification.verificationUrl);
+```
+
+```python Python
+import requests
+import os
+
+URTENTIC_API_KEY = os.getenv('URTENTIC_API_KEY')
+URTENTIC_CLIENT_ID = os.getenv('URTENTIC_CLIENT_ID')
+BASE_URL = 'https://api.urtentic.com/api/v1'
+
+def create_verification(workflow_id, metadata=None):
+    if metadata is None:
+        metadata = {}
+    response = requests.post(
+        f'{BASE_URL}/verifications',
+        headers={
+            'Authorization': f'Bearer {URTENTIC_API_KEY}',
+            'X-CLIENT-ID': URTENTIC_CLIENT_ID,
+            'Content-Type': 'application/json'
+        },
+        json={ 'workflowId': workflow_id, 'metadata': metadata }
+    )
+    return response.json()
+
+def get_verification_status(verification_id):
+    response = requests.get(
+        f'{BASE_URL}/verifications/{verification_id}',
+        headers={
+            'Authorization': f'Bearer {URTENTIC_API_KEY}',
+            'X-CLIENT-ID': URTENTIC_CLIENT_ID
+        }
+    )
+    return response.json()
+
+# Usage
+verification = create_verification('wf_abc123', { 'userId': 'user_12345' })
+print(f"Verification URL: {verification['verificationUrl']}")
+```
+
+```php PHP
+<?php
+$apiKey = getenv('URTENTIC_API_KEY');
+$clientId = getenv('URTENTIC_CLIENT_ID');
+$baseUrl = 'https://api.urtentic.com/api/v1';
+
+function createVerification($workflowId, $metadata = []) {
+    global $apiKey, $clientId, $baseUrl;
+    $data = [ 'workflowId' => $workflowId, 'metadata' => $metadata ];
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => [
+                "Authorization: Bearer $apiKey",
+                "X-CLIENT-ID: $clientId",
+                'Content-Type: application/json'
+            ],
+            'content' => json_encode($data)
+        ]
+    ]);
+    $response = file_get_contents("$baseUrl/verifications", false, $context);
+    return json_decode($response, true);
+}
+
+$verification = createVerification('wf_abc123', [ 'userId' => 'user_12345' ]);
+echo "Verification URL: " . $verification['verificationUrl'] . PHP_EOL;
+?>
+```
+
+```bash cURL
+# Set your API credentials
+export URTENTIC_API_KEY="your-base64-encoded-api-key"
+export URTENTIC_CLIENT_ID="your-base64-encoded-client-id"
+
+# Create a verification
+curl -X POST https://api.urtentic.com/api/v1/verifications \
+  -H "Authorization: Bearer $URTENTIC_API_KEY" \
+  -H "X-CLIENT-ID: $URTENTIC_CLIENT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workflowId": "wf_abc123",
+    "metadata": {
+      "userId": "user_12345",
+      "applicationId": "app_67890"
+    }
+  }'
+
+# Check verification status
+curl -X GET https://api.urtentic.com/api/v1/verifications/ver_xyz789 \
+  -H "Authorization: Bearer $URTENTIC_API_KEY" \
+  -H "X-CLIENT-ID: $URTENTIC_CLIENT_ID"
+```
+
+</CodeGroup>
+
+## Workflow Types
+
+### Document Verification Only
+```json
+{
+  "workflowId": "wf_docs_only",
+  "metadata": {
+    "requiredDocuments": ["passport", "national_id"]
+  }
+}
+```
+
+### Liveness + Document Verification
+```json
+{
+  "workflowId": "wf_full_kyc",
+  "metadata": {
+    "enableLiveness": true,
+    "requiredDocuments": ["passport"]
+  }
+}
+```
+
+### Location + Email Verification
+```json
+{
+  "workflowId": "wf_location_email",
+  "metadata": {
+    "requireLocation": true,
+    "emailAddress": "user@example.com"
+  }
+}
+```
+
+## Handling Webhooks
+
+Configure webhook endpoints in your dashboard to receive real-time updates:
+
+<CodeGroup>
+
+```javascript Node.js
+// Express.js webhook handler
+app.post('/webhook/urtentic', express.raw({type: 'application/json'}), (req, res) => {
+  const signature = req.headers['x-urtentic-signature'];
+  const timestamp = req.headers['x-urtentic-timestamp'];
+  const payload = req.body;
+
+  try {
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (Math.abs(currentTime - parseInt(timestamp)) > 300) {
+      return res.status(400).send('Webhook timestamp too old');
+    }
+
+    const secretBytes = Buffer.from(WEBHOOK_SECRET, 'base64');
+    const expectedSignature = crypto
+      .createHmac('sha256', secretBytes)
+      .update(payload)
+      .digest('hex');
+
+    let sig = signature.startsWith('sha256=') ? signature.substring(7) : signature;
+
+    if (sig !== expectedSignature) {
+      return res.status(400).send('Invalid signature');
+    }
+  } catch (error) {
+    return res.status(400).send('Signature verification failed');
+  }
+
+  const event = JSON.parse(payload);
+
+  switch (event.eventName) {
+    case 'verification_completed':
+      console.log('Verification completed:', event.flowId);
+      break;
+    case 'verification_abandoned':
+      console.log('Verification abandoned:', event.flowId);
+      break;
+    case 'step_completed':
+      console.log('Step completed:', event.flowId, 'Step:', event.step.stepId);
+      break;
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+```python Python
+from flask import Flask, request, jsonify
+import hmac, hashlib, json, os, base64, time
+
+app = Flask(__name__)
+WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET')
+
+@app.route('/webhook/urtentic', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('x-urtentic-signature')
+    timestamp = request.headers.get('x-urtentic-timestamp')
+    payload = request.get_data()
+
+    try:
+        current_time = int(time.time())
+        if abs(current_time - int(timestamp)) > 300:
+            return jsonify({'error': 'Webhook timestamp too old'}), 400
+
+        secret_bytes = base64.b64decode(WEBHOOK_SECRET)
+        expected_signature = hmac.new(
+            secret_bytes, payload, hashlib.sha256
+        ).hexdigest()
+
+        sig = signature[7:] if signature.startswith('sha256=') else signature
+        if sig != expected_signature:
+            return jsonify({'error': 'Invalid signature'}), 400
+    except Exception:
+        return jsonify({'error': 'Signature verification failed'}), 400
+
+    event = json.loads(payload)
+
+    if event['eventName'] == 'verification_completed':
+        print(f"Verification completed: {event['flowId']}")
+    elif event['eventName'] == 'step_completed':
+        print(f"Step completed: {event['flowId']}")
+
+    return jsonify({'status': 'ok'})
+```
+
+```php PHP
+<?php
+$webhookSecret = getenv('WEBHOOK_SECRET');
+$payload = file_get_contents('php://input');
+$signature = $_SERVER['HTTP_X_URTENTIC_SIGNATURE'] ?? '';
+$timestamp = $_SERVER['HTTP_X_URTENTIC_TIMESTAMP'] ?? '';
+
+try {
+    $currentTime = time();
+    if (abs($currentTime - intval($timestamp)) > 300) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Webhook timestamp too old']);
+        exit;
+    }
+
+    $secretBytes = base64_decode($webhookSecret);
+    $expectedSignature = hash_hmac('sha256', $payload, $secretBytes);
+    $sig = (strpos($signature, 'sha256=') === 0) ? substr($signature, 7) : $signature;
+
+    if (!hash_equals($expectedSignature, $sig)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid signature']);
+        exit;
+    }
+} catch (Exception $e) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Signature verification failed']);
+    exit;
+}
+
+$event = json_decode($payload, true);
+switch ($event['eventName']) {
+    case 'verification_completed':
+        error_log('Verification completed: ' . $event['flowId']);
+        break;
+    case 'step_completed':
+        error_log('Step completed: ' . $event['flowId']);
+        break;
+}
+
+http_response_code(200);
+echo json_encode(['status' => 'ok']);
+?>
+```
+
+</CodeGroup>
+
+## Error Handling
+
+The API uses standard HTTP status codes and returns detailed error messages:
+
+<CodeGroup>
+
+```javascript Node.js
+async function handleApiCall() {
+  try {
+    const response = await fetch(`${BASE_URL}/verifications`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${URTENTIC_API_KEY}`,
+        'X-CLIENT-ID': URTENTIC_CLIENT_ID,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ workflowId: 'wf_abc123' })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('API Error:', error);
+      switch (response.status) {
+        case 400: console.log('Bad request - check your payload'); break;
+        case 401: console.log('Unauthorized - check your API credentials'); break;
+        case 429: console.log('Rate limited - wait before retrying'); break;
+      }
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Network error:', error);
+    return null;
+  }
+}
+```
+
+```python Python
+import requests
+from requests.exceptions import RequestException
+
+def handle_api_call():
+    try:
+        response = requests.post(
+            f'{BASE_URL}/verifications',
+            headers={
+                'Authorization': f'Bearer {URTENTIC_API_KEY}',
+                'X-CLIENT-ID': URTENTIC_CLIENT_ID,
+                'Content-Type': 'application/json'
+            },
+            json={'workflowId': 'wf_abc123'}
+        )
+        if not response.ok:
+            error_data = response.json()
+            print(f'API Error: {error_data}')
+            return None
+        return response.json()
+    except RequestException as e:
+        print(f'Network error: {e}')
+        return None
+```
+
+```php PHP
+<?php
+function handleApiCall() {
+    global $apiKey, $clientId, $baseUrl;
+    $data = ['workflowId' => 'wf_abc123'];
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => [
+                "Authorization: Bearer $apiKey",
+                "X-CLIENT-ID: $clientId",
+                'Content-Type: application/json'
+            ],
+            'content' => json_encode($data),
+            'ignore_errors' => true
+        ]
+    ]);
+    $response = file_get_contents("$baseUrl/verifications", false, $context);
+    if ($response === false) {
+        error_log('Network error occurred');
+        return null;
+    }
+    return json_decode($response, true);
+}
+?>
+```
+
+</CodeGroup>
+
+## Next Steps
+
+- [API Reference](/api-reference/introduction) - Complete API documentation
+- [SDK Integration](/sdk/introduction) - Client-side SDKs
+- [Webhook Setup](/webhooks/overview) - Real-time notifications
+
+## Support
+
+Need help? We're here to assist:
+
+- **Email**: [support@urtentic.com](mailto:support@urtentic.com)
+- **Documentation**: [docs.urtentic.com](https://docs.urtentic.com)
+- **Status Page**: [status.urtentic.com](https://status.urtentic.com)

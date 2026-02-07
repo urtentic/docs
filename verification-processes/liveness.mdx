@@ -1,0 +1,160 @@
+---
+title: Liveness Detection
+description: Verify that a user is physically present during verification by analyzing selfie videos or photos for signs of life.
+---
+
+## Walkthrough Video
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/Twa_tbNj-sk"
+  title="Liveness Detection Walkthrough"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+/>
+
+## Overview
+
+Liveness detection is a critical security layer that ensures:
+
+- **Physical Presence**: Confirms a real person is present during verification
+- **Anti-Spoofing Protection**: Prevents attacks using photos, pre-recorded videos, or masks
+- **Face Matching**: Optionally compares the live selfie with document photos
+- **Biometric Quality**: Ensures sufficient image quality for reliable verification
+
+## Biometric Types
+
+<CardGroup cols={3}>
+  <Card title="Passive Liveness" icon="camera">
+    Users take a selfie photo and receive immediate feedback. Analyzes micro-movements and 3D structure from a single photo.
+
+    **Type:** `PASSIVE_LIVENESS`
+  </Card>
+  <Card title="Selfie Video" icon="video">
+    Users record a short video with head motions. Analyzes movement patterns across video frames.
+
+    **Type:** `SELFIE_VIDEO`
+  </Card>
+  <Card title="Selfie Photo" icon="image">
+    Users take a selfie photo without feedback. Static image analysis only.
+
+    **Type:** `SELFIE_PHOTO`
+  </Card>
+</CardGroup>
+
+## Configuration
+
+```json
+{
+  "settings": [
+    {
+      "fieldName": "BIOMETRICS",
+      "value": "PASSIVE_LIVENESS"
+    }
+  ]
+}
+```
+
+## API Integration
+
+### Step 1: Submit Selfie for Liveness Check
+
+**Endpoint:** `POST /api/v1/verifications/{verificationId}/send-inputs`
+
+```bash
+curl -X POST https://api.urtentic.com/api/v1/verifications/{verificationId}/send-inputs \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}" \
+  -F 'inputs=[{"fieldName":"SELFIE_VIDEO","fileName":"liveness_video.mp4","type":"FILE"}]' \
+  -F 'documents=@/path/to/liveness_video.mp4'
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Inputs received successfully",
+  "verificationId": "85c94e71-6e3f-4a19-b15c-781d8a876542"
+}
+```
+
+### Step 2: Get Verification Results
+
+**Endpoint:** `GET /api/v1/verifications/{verificationId}`
+
+```bash
+curl -X GET https://api.urtentic.com/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542 \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}"
+```
+
+**Response:**
+```json
+{
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "status": "COMPLETED",
+  "steps": [
+    {
+      "stepId": "LIVENESS",
+      "status": 1,
+      "data": {
+        "liveness_confirmation": true,
+        "photo_of_face": "face_photo.jpg",
+        "duplicate_check_via_facematch": false
+      }
+    }
+  ]
+}
+```
+
+### Webhook Notification
+
+```json
+{
+  "eventName": "step_completed",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "timeStamp": "2024-01-10T10:31:00.000Z",
+  "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "metadata": { "userId": "user_12345" },
+  "id": "LIVENESS",
+  "status": 1,
+  "data": {
+    "liveness_confirmation": true,
+    "photo_of_face": "face_photo.jpg",
+    "duplicate_check_via_facematch": false
+  }
+}
+```
+
+## Process Dependencies
+
+Liveness can be used as input for other processes:
+
+- **Document Verification**: Uses liveness photo for face matching
+- **Video Agreement**: Can reference liveness data for face comparison
+
+## Implementation Tips
+
+<AccordionGroup>
+  <Accordion title="User Experience">
+    - Guide users to well-lit areas for better capture
+    - Show face positioning guidelines during capture
+    - Handle camera permission denials gracefully
+    - Provide retry options for failed attempts
+  </Accordion>
+  <Accordion title="Technical Implementation">
+    - Compress videos before upload (max 50MB recommended)
+    - Set appropriate capture duration limits (5-30 seconds)
+    - Validate media formats (MP4, WebM) client-side
+    - Handle network interruptions during upload
+  </Accordion>
+  <Accordion title="Security & Privacy">
+    - Encrypt biometric data in transit and at rest
+    - Delete biometric data after processing
+    - Log liveness attempts for security monitoring
+    - Explain biometric data usage to users
+  </Accordion>
+</AccordionGroup>
