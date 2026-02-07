@@ -93,11 +93,6 @@
           "anchor": "Dashboard",
           "href": "https://app.urtentic.com",
           "icon": "gauge"
-        },
-        {
-          "anchor": "Support",
-          "href": "mailto:support@urtentic.com",
-          "icon": "envelope"
         }
       ]
     }
