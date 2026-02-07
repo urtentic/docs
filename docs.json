@@ -37,13 +37,13 @@
             "pages": [
               "webhooks/overview",
               "webhooks/configuration",
-              "webhooks/workflow-management",
-              "webhooks/integration"
+              "webhooks/workflow-management"
             ]
           },
           {
-            "group": "SDK Integration",
+            "group": "Integration",
             "pages": [
+              "webhooks/integration",
               "sdk/introduction",
               "sdk/web/getting-started",
               "sdk/direct-link/getting-started"
