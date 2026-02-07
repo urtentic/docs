@@ -119,6 +119,16 @@
       "href": "https://app.urtentic.com"
     }
   },
+  "fonts": {
+    "heading": {
+      "family": "Inter",
+      "weight": 700
+    },
+    "body": {
+      "family": "Inter",
+      "weight": 400
+    }
+  },
   "footer": {
     "socials": {
       "x": "https://x.com/urtentic",
