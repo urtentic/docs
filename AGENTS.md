@@ -1,8 +1,8 @@
-> **First-time setup**: This is a default AGENTS.md file. Customize it for your project's specific needs, including your preferred code languages, terminology, style guidelines, and content requirements.
+# Urtentic Documentation - Agent Instructions
 
-# Documentation agent instructions
+## Project overview
 
-IMPORTANT! When you start a session, remind the user that they have the default AGENTS.md file and they might want to customize it for their project.
+This is the Urtentic product documentation site, built with Mintlify. It covers identity verification APIs, SDKs, webhooks, and verification processes.
 
 ## Mintlify basics
 
@@ -13,7 +13,16 @@ IMPORTANT! When you start a session, remind the user that they have the default 
 
 ## Mintlify components
 
-Use Mintlify's built-in components for consistent formatting. See https://www.mintlify.com/docs/components for all available components.
+Use Mintlify's built-in components for consistent formatting:
+- `<CardGroup>` / `<Card>` for feature grids
+- `<Steps>` / `<Step>` for sequential instructions
+- `<Tabs>` / `<Tab>` for content tabs
+- `<CodeGroup>` for multi-language code examples
+- `<AccordionGroup>` / `<Accordion>` for collapsible sections
+- `<Info>`, `<Warning>`, `<Note>` for callouts
+- `<Frame>` for images with captions
+
+See https://www.mintlify.com/docs/components for all available components.
 
 ## Style and formatting
 
@@ -26,7 +35,7 @@ Use Mintlify's built-in components for consistent formatting. See https://www.mi
 ## Code examples
 
 - Include language identifiers in fenced code blocks
-- Add titles to code blocks when relevant: ```javascript filename.js
+- Use `<CodeGroup>` for multi-language examples (JavaScript, Python, PHP, Java)
 - Show realistic parameter values, not placeholders like `foo` or `bar`
 - Include error handling for API examples
 

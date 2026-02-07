@@ -53,40 +53,35 @@
       },
       {
         "tab": "API Reference",
+        "openapi": "api-reference/openapi.yml",
         "groups": [
           {
-            "group": "API Documentation",
+            "group": "Overview",
             "pages": [
               "api-reference/introduction"
             ]
           },
           {
-            "group": "Endpoints",
+            "group": "Verification",
             "pages": [
-              {
-                "openapi": "GET /verifications/{verificationId}/status"
-              },
-              {
-                "openapi": "POST /verifications"
-              },
-              {
-                "openapi": "POST /verifications/{verificationId}/send-inputs"
-              },
-              {
-                "openapi": "POST /verifications/{verificationId}/validations/{processType}"
-              },
-              {
-                "openapi": "GET /workflows/supported-document-types"
-              },
-              {
-                "openapi": "GET /workflows/{workflowId}/document-types"
-              },
-              {
-                "openapi": "POST /workflows/{workflowId}/email-otp"
-              },
-              {
-                "openapi": "POST /webhooks/configure"
-              }
+              "POST /verifications",
+              "GET /verifications/{verificationId}/status",
+              "POST /verifications/{verificationId}/send-inputs",
+              "POST /verifications/{verificationId}/validations/{processType}"
+            ]
+          },
+          {
+            "group": "Workflows",
+            "pages": [
+              "GET /workflows/supported-document-types",
+              "GET /workflows/{workflowId}/document-types",
+              "POST /workflows/{workflowId}/email-otp"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "POST /webhooks/configure"
             ]
           }
         ]
@@ -124,7 +119,6 @@
       "href": "https://app.urtentic.com"
     }
   },
-  "openapi": "api-reference/openapi.yml",
   "footer": {
     "socials": {
       "x": "https://x.com/urtentic",
