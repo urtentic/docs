@@ -1,0 +1,192 @@
+---
+title: Address Verification
+description: Verify user residential addresses through document cross-referencing, geolocation data, and postal validation.
+---
+
+## Overview
+
+Address Verification confirms that a user's stated residential address is accurate and corresponds to their identity. It cross-references data from submitted identity documents, geolocation signals, and postal databases to:
+
+- **Validate address accuracy** against extracted document data
+- **Confirm user residency** using location intelligence signals
+- **Detect address fraud** through inconsistency analysis
+- **Ensure compliance** with regional address requirements
+
+## Configuration Options
+
+<AccordionGroup>
+  <Accordion title="Validation Settings">
+    - **Document Cross-Reference**: Match address against data extracted from submitted ID documents
+    - **Geolocation Confirmation**: Require address to align with detected location signals
+    - **Postal Validation**: Verify address format and existence against postal databases
+    - **Duplicate Detection**: Choose action for duplicate address submissions (`REJECTED` / `REVIEW_NEEDED`)
+  </Accordion>
+  <Accordion title="Restriction Settings">
+    - **Allowed Countries**: Restrict accepted addresses to specific countries
+    - **Address Completeness**: Require full address including street, city, postal code, and country
+  </Accordion>
+</AccordionGroup>
+
+```json
+{
+  "settings": [
+    { "fieldName": "DOCUMENT_CROSS_REFERENCE", "value": true },
+    { "fieldName": "GEOLOCATION_CONFIRMATION", "value": true },
+    { "fieldName": "POSTAL_VALIDATION", "value": true },
+    { "fieldName": "ADDRESS_DUPLICATE_DETECTION", "value": "REJECTED" },
+    { "fieldName": "ALLOWED_COUNTRIES", "value": ["NG", "GH", "KE", "ZA"] }
+  ]
+}
+```
+
+## Data Extraction
+
+The system extracts and validates address fields:
+
+| Output | Description |
+|---|---|
+| Address Line | Street number and street name |
+| City | City or municipality |
+| Province / State | State, province, or region |
+| Postal Code | ZIP or postal code |
+| Country | ISO country code |
+| Source | Where the address was sourced from (`DOCUMENT`, `GPS`, `IP`) |
+| Validation Result | Outcome of postal/document cross-check |
+
+## API Integration
+
+### Step 1: Submit Address for Verification
+
+**Endpoint:** `POST /api/v1/verifications/{verificationId}/send-inputs`
+
+```bash
+curl -X POST https://api.urtentic.com/api/v1/verifications/{verificationId}/send-inputs \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "inputs": [
+      {
+        "fieldName": "ADDRESS_LINE",
+        "value": "123 Main Street",
+        "type": "TEXT"
+      },
+      {
+        "fieldName": "CITY",
+        "value": "Lagos",
+        "type": "TEXT"
+      },
+      {
+        "fieldName": "PROVINCE",
+        "value": "Lagos State",
+        "type": "TEXT"
+      },
+      {
+        "fieldName": "POSTAL_CODE",
+        "value": "100001",
+        "type": "TEXT"
+      },
+      {
+        "fieldName": "COUNTRY",
+        "value": "NG",
+        "type": "TEXT"
+      }
+    ]
+  }'
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Inputs received successfully",
+  "verificationId": "85c94e71-6e3f-4a19-b15c-781d8a876542"
+}
+```
+
+### Step 2: Get Verification Results
+
+**Endpoint:** `GET /api/v1/verifications/{verificationId}`
+
+```bash
+curl -X GET https://api.urtentic.com/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542 \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-CLIENT-ID: ${CLIENT_ID}"
+```
+
+**Response:**
+```json
+{
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "status": "COMPLETED",
+  "steps": [
+    {
+      "stepId": "ADDRESS_VERIFICATION",
+      "status": 1,
+      "data": {
+        "address_line": "123 Main Street",
+        "city": "Lagos",
+        "province": "Lagos State",
+        "postal_code": "100001",
+        "country": "Nigeria",
+        "source": "DOCUMENT",
+        "validation_result": "PASSED"
+      }
+    }
+  ]
+}
+```
+
+### Webhook Notification
+
+```json
+{
+  "eventName": "step_completed",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
+  "timeStamp": "2024-01-10T10:31:00.000Z",
+  "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "metadata": { "userId": "user_12345" },
+  "id": "ADDRESS_VERIFICATION",
+  "status": 1,
+  "data": {
+    "address_line": "123 Main Street",
+    "city": "Lagos",
+    "province": "Lagos State",
+    "postal_code": "100001",
+    "country": "Nigeria",
+    "source": "DOCUMENT",
+    "validation_result": "PASSED"
+  }
+}
+```
+
+## Process Dependencies
+
+Address verification works best in combination with other processes:
+
+- **Document Verification**: Address extracted from submitted ID is used for cross-referencing
+- **Location Intelligence**: GPS and IP signals supplement the address data and improve accuracy
+
+## Implementation Tips
+
+<AccordionGroup>
+  <Accordion title="User Experience">
+    - Pre-populate address fields from extracted document data when available
+    - Provide address autocomplete to reduce input errors
+    - Show clear validation feedback for each address field
+    - Explain why address verification is required
+  </Accordion>
+  <Accordion title="Technical Implementation">
+    - Normalize address fields before submission (trim whitespace, standardize casing)
+    - Use ISO 3166-1 alpha-2 country codes for the `COUNTRY` field
+    - Validate postal code format client-side based on selected country
+    - Handle partial address submissions gracefully
+  </Accordion>
+  <Accordion title="Security & Compliance">
+    - Always transmit address data over HTTPS
+    - Log all verification attempts for audit purposes
+    - Apply appropriate data retention policies for address data
+    - Restrict access to verified address data to authorized services only
+  </Accordion>
+</AccordionGroup>

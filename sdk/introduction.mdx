@@ -7,9 +7,12 @@ Urtentic provides several integration options to incorporate identity verificati
 
 ## Available Integration Methods
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Web SDK" icon="window" href="/sdk/web/getting-started">
     JavaScript-based solution for web applications with pre-built UI components and a flexible API for complete control over the verification flow.
+  </Card>
+  <Card title="Mobile SDK" icon="mobile" href="/sdk/mobile/getting-started">
+    Flutter and React Native integration using a WebView-based approach — embed the hosted verification flow directly in your iOS or Android app.
   </Card>
   <Card title="Direct Link" icon="link" href="/sdk/direct-link/getting-started">
     Redirect users to a hosted verification flow with minimal development effort while providing a seamless experience.
@@ -26,13 +29,13 @@ Urtentic provides several integration options to incorporate identity verificati
 
 ## Which Integration Method Should I Choose?
 
-| Feature | Web SDK | Direct Link |
-|---------|---------|-------------|
-| Integration Complexity | Moderate | Low |
-| UI Customization | High | Limited |
-| Developer Control | Complete | Basic |
-| Implementation Time | 1-3 days | Less than 1 day |
-| Maintenance Required | Minimal | None |
+| Feature | Web SDK | Mobile SDK | Direct Link |
+|---------|---------|------------|-------------|
+| Integration Complexity | Moderate | Moderate | Low |
+| UI Customization | High | Limited | Limited |
+| Developer Control | Complete | Moderate | Basic |
+| Implementation Time | 1-3 days | 1-2 days | Less than 1 day |
+| Maintenance Required | Minimal | Minimal | None |
 
 <Tabs>
   <Tab title="Choose Web SDK">
@@ -41,6 +44,13 @@ Urtentic provides several integration options to incorporate identity verificati
     - Custom UI to match your brand identity
     - Complete control over the verification flow
     - Detailed event handling and callbacks
+  </Tab>
+  <Tab title="Choose Mobile SDK">
+    Choose the **Mobile SDK** when you need:
+    - Native iOS or Android app integration (Flutter or React Native)
+    - Full verification flow embedded within your app via WebView
+    - Camera and liveness detection inside the app experience
+    - Event-driven callbacks to update app state after verification
   </Tab>
   <Tab title="Choose Direct Link">
     Choose **Direct Link** when you need:

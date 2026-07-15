@@ -54,7 +54,7 @@ curl -X POST https://api.urtentic.com/api/v1/verifications \
   -H "X-CLIENT-ID: $URTENTIC_CLIENT_ID" \
   -H "Content-Type: application/json" \
   -d '{
-    "workflowId": "wf_abc123",
+    "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
     "metadata": {
       "userId": "user_12345",
       "applicationId": "app_67890"
@@ -65,22 +65,22 @@ curl -X POST https://api.urtentic.com/api/v1/verifications \
 **Response:**
 ```json
 {
-  "id": "ver_xyz789",
-  "workflowId": "wf_abc123",
+  "id": "85c94e71-6e3f-4a19-b15c-781d8a876542",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
   "status": "pending",
   "metadata": {
     "userId": "user_12345",
     "applicationId": "app_67890"
   },
   "createdAt": "2023-12-01T10:00:00Z",
-  "verificationUrl": "https://verify.urtentic.com/ver_xyz789"
+  "verificationUrl": "https://verify.urtentic.com?flowId=db50ed08-18fa-41e8-9e46-a44aca39f69d&clientId=YOUR_CLIENT_ID&metadata=%7B%22userId%22%3A%22user_12345%22%7D"
 }
 ```
 
 ### Step 3: Check Verification Status
 
 ```bash
-curl -X GET https://api.urtentic.com/api/v1/verifications/ver_xyz789 \
+curl -X GET https://api.urtentic.com/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542 \
   -H "Authorization: Bearer $URTENTIC_API_KEY" \
   -H "X-CLIENT-ID: $URTENTIC_CLIENT_ID"
 ```
@@ -95,7 +95,7 @@ const URTENTIC_CLIENT_ID = process.env.URTENTIC_CLIENT_ID;
 const BASE_URL = 'https://api.urtentic.com/api/v1';
 
 // Create a verification
-async function createVerification(workflowId, metadata = {}) {
+async function createVerification(flowId, metadata = {}) {
   const response = await fetch(`${BASE_URL}/verifications`, {
     method: 'POST',
     headers: {
@@ -103,7 +103,7 @@ async function createVerification(workflowId, metadata = {}) {
       'X-CLIENT-ID': URTENTIC_CLIENT_ID,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ workflowId, metadata })
+    body: JSON.stringify({ flowId, metadata })
   });
   return await response.json();
 }
@@ -120,7 +120,7 @@ async function getVerificationStatus(verificationId) {
 }
 
 // Usage
-const verification = await createVerification('wf_abc123', { userId: 'user_12345' });
+const verification = await createVerification('db50ed08-18fa-41e8-9e46-a44aca39f69d', { userId: 'user_12345' });
 console.log('Verification URL:', verification.verificationUrl);
 ```
 
@@ -132,7 +132,7 @@ URTENTIC_API_KEY = os.getenv('URTENTIC_API_KEY')
 URTENTIC_CLIENT_ID = os.getenv('URTENTIC_CLIENT_ID')
 BASE_URL = 'https://api.urtentic.com/api/v1'
 
-def create_verification(workflow_id, metadata=None):
+def create_verification(flow_id, metadata=None):
     if metadata is None:
         metadata = {}
     response = requests.post(
@@ -142,7 +142,7 @@ def create_verification(workflow_id, metadata=None):
             'X-CLIENT-ID': URTENTIC_CLIENT_ID,
             'Content-Type': 'application/json'
         },
-        json={ 'workflowId': workflow_id, 'metadata': metadata }
+        json={ 'flowId': flow_id, 'metadata': metadata }
     )
     return response.json()
 
@@ -157,7 +157,7 @@ def get_verification_status(verification_id):
     return response.json()
 
 # Usage
-verification = create_verification('wf_abc123', { 'userId': 'user_12345' })
+verification = create_verification('db50ed08-18fa-41e8-9e46-a44aca39f69d', { 'userId': 'user_12345' })
 print(f"Verification URL: {verification['verificationUrl']}")
 ```
 
@@ -167,9 +167,9 @@ $apiKey = getenv('URTENTIC_API_KEY');
 $clientId = getenv('URTENTIC_CLIENT_ID');
 $baseUrl = 'https://api.urtentic.com/api/v1';
 
-function createVerification($workflowId, $metadata = []) {
+function createVerification($flowId, $metadata = []) {
     global $apiKey, $clientId, $baseUrl;
-    $data = [ 'workflowId' => $workflowId, 'metadata' => $metadata ];
+    $data = [ 'flowId' => $flowId, 'metadata' => $metadata ];
     $context = stream_context_create([
         'http' => [
             'method' => 'POST',
@@ -185,9 +185,65 @@ function createVerification($workflowId, $metadata = []) {
     return json_decode($response, true);
 }
 
-$verification = createVerification('wf_abc123', [ 'userId' => 'user_12345' ]);
+$verification = createVerification('db50ed08-18fa-41e8-9e46-a44aca39f69d', [ 'userId' => 'user_12345' ]);
 echo "Verification URL: " . $verification['verificationUrl'] . PHP_EOL;
 ?>
+```
+
+```java Java
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Map;
+
+public class UrtenticClient {
+    private static final String API_KEY = System.getenv("URTENTIC_API_KEY");
+    private static final String CLIENT_ID = System.getenv("URTENTIC_CLIENT_ID");
+    private static final String BASE_URL = "https://api.urtentic.com/api/v1";
+
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    // Create a verification
+    public Map<?, ?> createVerification(String flowId, Map<String, Object> metadata) throws Exception {
+        Map<String, Object> body = Map.of("flowId", flowId, "metadata", metadata);
+        String json = mapper.writeValueAsString(body);
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(BASE_URL + "/verifications"))
+            .header("Authorization", "Bearer " + API_KEY)
+            .header("X-CLIENT-ID", CLIENT_ID)
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(json))
+            .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return mapper.readValue(response.body(), Map.class);
+    }
+
+    // Check verification status
+    public Map<?, ?> getVerificationStatus(String verificationId) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(BASE_URL + "/verifications/" + verificationId))
+            .header("Authorization", "Bearer " + API_KEY)
+            .header("X-CLIENT-ID", CLIENT_ID)
+            .GET()
+            .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return mapper.readValue(response.body(), Map.class);
+    }
+
+    // Usage
+    public static void main(String[] args) throws Exception {
+        UrtenticClient client = new UrtenticClient();
+        Map<String, Object> metadata = Map.of("userId", "user_12345");
+        Map<?, ?> verification = client.createVerification("db50ed08-18fa-41e8-9e46-a44aca39f69d", metadata);
+        System.out.println("Verification URL: " + verification.get("verificationUrl"));
+    }
+}
 ```
 
 ```bash cURL
@@ -201,7 +257,7 @@ curl -X POST https://api.urtentic.com/api/v1/verifications \
   -H "X-CLIENT-ID: $URTENTIC_CLIENT_ID" \
   -H "Content-Type: application/json" \
   -d '{
-    "workflowId": "wf_abc123",
+    "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
     "metadata": {
       "userId": "user_12345",
       "applicationId": "app_67890"
@@ -209,7 +265,7 @@ curl -X POST https://api.urtentic.com/api/v1/verifications \
   }'
 
 # Check verification status
-curl -X GET https://api.urtentic.com/api/v1/verifications/ver_xyz789 \
+curl -X GET https://api.urtentic.com/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542 \
   -H "Authorization: Bearer $URTENTIC_API_KEY" \
   -H "X-CLIENT-ID: $URTENTIC_CLIENT_ID"
 ```
@@ -218,12 +274,14 @@ curl -X GET https://api.urtentic.com/api/v1/verifications/ver_xyz789 \
 
 ## Workflow Types
 
+Each workflow is configured in your Urtentic dashboard — the steps it includes (document verification, liveness, email, etc.) are defined there, not in the API request. The `flowId` identifies which workflow to run, and `metadata` carries your own tracking data.
+
 ### Document Verification Only
 ```json
 {
-  "workflowId": "wf_docs_only",
+  "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
   "metadata": {
-    "requiredDocuments": ["passport", "national_id"]
+    "userId": "user_12345"
   }
 }
 ```
@@ -231,10 +289,9 @@ curl -X GET https://api.urtentic.com/api/v1/verifications/ver_xyz789 \
 ### Liveness + Document Verification
 ```json
 {
-  "workflowId": "wf_full_kyc",
+  "flowId": "c3a2b1d0-5e4f-4a19-b15c-781d8a876542",
   "metadata": {
-    "enableLiveness": true,
-    "requiredDocuments": ["passport"]
+    "userId": "user_12345"
   }
 }
 ```
@@ -242,10 +299,9 @@ curl -X GET https://api.urtentic.com/api/v1/verifications/ver_xyz789 \
 ### Location + Email Verification
 ```json
 {
-  "workflowId": "wf_location_email",
+  "flowId": "f7e6d5c4-3b2a-4a19-b15c-781d8a876542",
   "metadata": {
-    "requireLocation": true,
-    "emailAddress": "user@example.com"
+    "userId": "user_12345"
   }
 }
 ```
@@ -294,7 +350,7 @@ app.post('/webhook/urtentic', express.raw({type: 'application/json'}), (req, res
       console.log('Verification abandoned:', event.flowId);
       break;
     case 'step_completed':
-      console.log('Step completed:', event.flowId, 'Step:', event.step.stepId);
+      console.log('Step completed:', event.flowId, 'Step:', event.id);
       break;
   }
 
@@ -386,6 +442,78 @@ echo json_encode(['status' => 'ok']);
 ?>
 ```
 
+```java Java
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.InputStream;
+import java.util.Base64;
+import java.util.Map;
+
+public class UrtenticWebhookHandler implements HttpHandler {
+    private static final String WEBHOOK_SECRET = System.getenv("WEBHOOK_SECRET");
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    @Override
+    public void handle(HttpExchange exchange) throws IOException {
+        String signature = exchange.getRequestHeaders().getFirst("x-urtentic-signature");
+        String timestamp  = exchange.getRequestHeaders().getFirst("x-urtentic-timestamp");
+        byte[] payload    = exchange.getRequestBody().readAllBytes();
+
+        try {
+            long currentTime = System.currentTimeMillis() / 1000;
+            if (Math.abs(currentTime - Long.parseLong(timestamp)) > 300) {
+                sendResponse(exchange, 400, "Webhook timestamp too old");
+                return;
+            }
+
+            byte[] secretBytes = Base64.getDecoder().decode(WEBHOOK_SECRET);
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secretBytes, "HmacSHA256"));
+            String expected = bytesToHex(mac.doFinal(payload));
+            String incoming = signature.startsWith("sha256=") ? signature.substring(7) : signature;
+
+            if (!expected.equals(incoming)) {
+                sendResponse(exchange, 400, "Invalid signature");
+                return;
+            }
+        } catch (Exception e) {
+            sendResponse(exchange, 400, "Signature verification failed");
+            return;
+        }
+
+        Map<?, ?> event = mapper.readValue(payload, Map.class);
+        String eventName = (String) event.get("eventName");
+
+        switch (eventName) {
+            case "verification_completed" ->
+                System.out.println("Verification completed: " + event.get("flowId"));
+            case "verification_abandoned" ->
+                System.out.println("Verification abandoned: " + event.get("flowId"));
+            case "step_completed" ->
+                System.out.println("Step completed: " + event.get("flowId") + " Step: " + event.get("id"));
+        }
+
+        sendResponse(exchange, 200, "OK");
+    }
+
+    private void sendResponse(HttpExchange exchange, int status, String body) throws IOException {
+        byte[] bytes = body.getBytes();
+        exchange.sendResponseHeaders(status, bytes.length);
+        exchange.getResponseBody().write(bytes);
+        exchange.getResponseBody().close();
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) sb.append(String.format("%02x", b));
+        return sb.toString();
+    }
+}
+```
+
 </CodeGroup>
 
 ## Error Handling
@@ -404,7 +532,7 @@ async function handleApiCall() {
         'X-CLIENT-ID': URTENTIC_CLIENT_ID,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ workflowId: 'wf_abc123' })
+      body: JSON.stringify({ flowId: 'db50ed08-18fa-41e8-9e46-a44aca39f69d' })
     });
 
     if (!response.ok) {
@@ -438,7 +566,7 @@ def handle_api_call():
                 'X-CLIENT-ID': URTENTIC_CLIENT_ID,
                 'Content-Type': 'application/json'
             },
-            json={'workflowId': 'wf_abc123'}
+            json={'flowId': 'db50ed08-18fa-41e8-9e46-a44aca39f69d'}
         )
         if not response.ok:
             error_data = response.json()
@@ -454,7 +582,7 @@ def handle_api_call():
 <?php
 function handleApiCall() {
     global $apiKey, $clientId, $baseUrl;
-    $data = ['workflowId' => 'wf_abc123'];
+    $data = ['flowId' => 'db50ed08-18fa-41e8-9e46-a44aca39f69d'];
     $context = stream_context_create([
         'http' => [
             'method' => 'POST',
@@ -475,6 +603,48 @@ function handleApiCall() {
     return json_decode($response, true);
 }
 ?>
+```
+
+```java Java
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Map;
+
+public Map<?, ?> handleApiCall() {
+    try {
+        String json = mapper.writeValueAsString(
+            Map.of("flowId", "db50ed08-18fa-41e8-9e46-a44aca39f69d")
+        );
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(BASE_URL + "/verifications"))
+            .header("Authorization", "Bearer " + API_KEY)
+            .header("X-CLIENT-ID", CLIENT_ID)
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(json))
+            .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() >= 400) {
+            System.err.println("API Error " + response.statusCode() + ": " + response.body());
+            switch (response.statusCode()) {
+                case 400 -> System.err.println("Bad request - check your payload");
+                case 401 -> System.err.println("Unauthorized - check your API credentials");
+                case 429 -> System.err.println("Rate limited - wait before retrying");
+            }
+            return null;
+        }
+
+        return mapper.readValue(response.body(), Map.class);
+    } catch (Exception e) {
+        System.err.println("Network error: " + e.getMessage());
+        return null;
+    }
+}
 ```
 
 </CodeGroup>

@@ -89,4 +89,16 @@ Drag and drop **Processes** to include in your workflow:
 
     **Outputs:** Face Match result, Audio Transcript
   </Accordion>
+
+  <Accordion title="Address Verification" icon="map-pin">
+    **Identifier:** `ADDRESS_VERIFICATION`
+
+    **Validation Settings:** Document Cross-Reference, Geolocation Confirmation, Postal Validation, Duplicate Detection
+
+    **Restriction Settings:** Allowed Countries, Address Completeness
+
+    **Dependencies:** Optional `DOCUMENT_VERIFICATION` for address cross-referencing; optional `LOCATION_INTELLIGENCE` for geolocation confirmation
+
+    **Outputs:** Address Line, City, Province/State, Postal Code, Country, Source (`DOCUMENT`, `GPS`, `IP`), Validation Result
+  </Accordion>
 </AccordionGroup>

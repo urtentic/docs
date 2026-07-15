@@ -1,0 +1,398 @@
+---
+title: Mobile SDK
+description: Integrate identity verification into your iOS and Android apps using a WebView-based approach with the Urtentic hosted verification flow.
+---
+
+Urtentic's mobile integration embeds the hosted verification flow (`https://verify.urtentic.com`) inside a native WebView. This gives you a full verification experience with camera access, liveness detection, and document capture — without needing a native SDK.
+
+## How It Works
+
+1. Your app opens a WebView pointed at `https://verify.urtentic.com` with `clientId`, `flowId`, and `metadata` as query parameters.
+2. The verification flow runs entirely within the WebView (camera, document capture, liveness, etc.).
+3. The hosted page posts `postMessage` events to signal progress.
+4. Your app listens for these events via a JavaScript bridge and responds accordingly (close the WebView, update state, etc.).
+
+## Flutter Integration
+
+The example below is a complete Flutter implementation using [`webview_flutter`](https://pub.dev/packages/webview_flutter).
+
+### Dependencies
+
+Add these to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  webview_flutter: ^4.13.0
+  webview_flutter_android: ^4.10.11
+  webview_flutter_wkwebview: ^3.23.5
+  permission_handler: ^12.0.1
+```
+
+### iOS Setup
+
+In `ios/Runner/Info.plist`, add camera and microphone usage descriptions:
+
+```xml
+<key>NSCameraUsageDescription</key>
+<string>Camera access is required for identity verification.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>Microphone access is required for video verification.</string>
+```
+
+### Android Setup
+
+In `android/app/src/main/AndroidManifest.xml`, add:
+
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.INTERNET" />
+```
+
+### Full Implementation
+
+```dart
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+
+class UrtenticVerificationPage extends StatefulWidget {
+  final String clientId;
+  final String flowId;
+  final String metadata;
+  final void Function(String) onFinished;
+  final void Function() onExited;
+
+  const UrtenticVerificationPage({
+    super.key,
+    required this.clientId,
+    required this.flowId,
+    required this.metadata,
+    required this.onFinished,
+    required this.onExited,
+  });
+
+  @override
+  State<UrtenticVerificationPage> createState() =>
+      _UrtenticVerificationPageState();
+}
+
+class _UrtenticVerificationPageState extends State<UrtenticVerificationPage> {
+  late WebViewController controller;
+  int loadingPercentage = 0;
+
+  static const _urtenticUrl = 'https://verify.urtentic.com';
+
+  Future<void> _requestPermissions() async {
+    await [Permission.camera, Permission.microphone].request();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _requestPermissions();
+    _initializeController();
+  }
+
+  void _initializeController() {
+    late final PlatformWebViewControllerCreationParams params;
+
+    // iOS: enable inline media playback without requiring user gesture
+    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+      params = WebKitWebViewControllerCreationParams(
+        allowsInlineMediaPlayback: true,
+        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+      );
+    } else {
+      params = const PlatformWebViewControllerCreationParams();
+    }
+
+    controller = WebViewController.fromPlatformCreationParams(params)
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.white)
+      // Register a JS bridge so the hosted page can send events to Flutter
+      ..addJavaScriptChannel(
+        'UrtenticBridge',
+        onMessageReceived: (JavaScriptMessage message) {
+          _handleMessage(message.message);
+        },
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (progress) =>
+              setState(() => loadingPercentage = progress),
+          onPageStarted: (_) => setState(() => loadingPercentage = 0),
+          onPageFinished: (_) {
+            _injectBridgeListener();
+            setState(() => loadingPercentage = 100);
+          },
+        ),
+      );
+
+    // Android: grant camera/microphone permissions from within the WebView
+    if (controller.platform is AndroidWebViewController) {
+      AndroidWebViewController.enableDebugging(true);
+      final androidController =
+          controller.platform as AndroidWebViewController;
+      androidController.setMediaPlaybackRequiresUserGesture(false);
+      androidController.setOnPlatformPermissionRequest((request) {
+        request.grant();
+      });
+    }
+
+    // Build the verification URL with required query parameters
+    final uri = Uri.parse(_urtenticUrl).replace(
+      queryParameters: {
+        'clientId': widget.clientId,
+        'flowId': widget.flowId,
+        'metadata': widget.metadata,
+      },
+    );
+
+    controller.loadRequest(uri);
+  }
+
+  /// Inject a postMessage listener after the page loads.
+  /// This forwards verification events from the hosted page to the Flutter bridge.
+  void _injectBridgeListener() {
+    const jsScript = '''
+      window.addEventListener('message', function(event) {
+          const expectedOrigin = new URL("$_urtenticUrl").origin;
+          if (event.origin !== expectedOrigin) return;
+
+          const data = event.data;
+          if (data && (
+            data.type === 'verificationComplete' ||
+            data.type === 'verificationStarted' ||
+            data.type === 'verificationExited'
+          )) {
+              if (window.UrtenticBridge) {
+                  window.UrtenticBridge.postMessage(JSON.stringify(data));
+              }
+          }
+      }, false);
+    ''';
+
+    controller.runJavaScript(jsScript);
+  }
+
+  /// Handle events sent from the hosted verification page.
+  void _handleMessage(String jsonString) {
+    try {
+      final data = jsonDecode(jsonString) as Map<String, dynamic>;
+      final type = data['type'] as String?;
+
+      switch (type) {
+        case 'verificationStarted':
+          // Verification flow has begun — update UI if needed
+          break;
+        case 'verificationComplete':
+          Navigator.of(context).pop();
+          widget.onFinished(type!);
+          break;
+        case 'verificationExited':
+          Navigator.of(context).pop();
+          widget.onExited();
+          break;
+      }
+    } catch (e) {
+      debugPrint('UrtenticBridge error: $e');
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    if (mounted) super.setState(fn);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false, // Prevent back-swipe from closing mid-verification
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Verify Identity')),
+        body: Stack(
+          children: [
+            WebViewWidget(controller: controller),
+            if (loadingPercentage < 80)
+              const Center(child: CircularProgressIndicator()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+### Launching the Verification Page
+
+```dart
+import 'dart:convert';
+
+Future<void> startVerification(BuildContext context) async {
+  final metadata = jsonEncode({
+    'userId': 'user_12345',
+    'deviceId': 'device_abc',
+  });
+
+  await Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => UrtenticVerificationPage(
+        clientId: 'YOUR_CLIENT_ID',
+        flowId: 'YOUR_FLOW_ID',
+        metadata: metadata,
+        onFinished: (type) {
+          // type == 'verificationComplete'
+          // Update your backend or local state here
+          print('Verification finished: $type');
+        },
+        onExited: () {
+          // User exited before completing
+          print('User exited verification');
+        },
+      ),
+    ),
+  );
+}
+```
+
+## Verification Events
+
+The hosted page emits `postMessage` events that your bridge forwards to Flutter:
+
+| Event type | Meaning |
+|---|---|
+| `verificationStarted` | The user has begun the verification flow |
+| `verificationComplete` | The user has completed all verification steps |
+| `verificationExited` | The user closed or abandoned the flow |
+
+<Warning>
+`verificationComplete` indicates the user finished the flow in the UI — it does not mean the backend has approved the verification. Always rely on [webhook notifications](/webhooks/overview) for the authoritative result before granting access.
+</Warning>
+
+## URL Parameters
+
+The verification page is loaded at:
+
+```
+https://verify.urtentic.com?clientId={CLIENT_ID}&flowId={FLOW_ID}&metadata={METADATA}
+```
+
+| Parameter | Required | Description |
+|---|---|---|
+| `clientId` | Yes | Your Urtentic client ID (base64-encoded) |
+| `flowId` | Yes | The UUID of your verification flow |
+| `metadata` | No | URL-encoded JSON string with custom data (e.g. `userId`, `deviceId`) |
+
+## Permissions
+
+The WebView requires camera and microphone access for document capture and liveness detection. Request these at the OS level before loading the WebView:
+
+```dart
+await [Permission.camera, Permission.microphone].request();
+```
+
+On Android, also grant permissions requested from within the WebView by implementing `setOnPlatformPermissionRequest`:
+
+```dart
+androidController.setOnPlatformPermissionRequest((request) {
+  request.grant();
+});
+```
+
+## Handling Results
+
+After `verificationComplete`, refresh the user's verification status from your backend rather than relying solely on the event type:
+
+```dart
+onFinished: (type) async {
+  final status = await yourApi.getVerificationStatus(userId);
+  // Update local state based on backend response
+},
+```
+
+## React Native Integration
+
+For React Native, use [`react-native-webview`](https://github.com/react-native-webview/react-native-webview). The approach is identical: load `https://verify.urtentic.com` with query parameters and listen for `postMessage` events.
+
+```jsx
+import React, { useRef } from 'react';
+import { WebView } from 'react-native-webview';
+
+const CLIENT_ID = 'YOUR_CLIENT_ID';
+const FLOW_ID = 'YOUR_FLOW_ID';
+
+export function UrtenticVerification({ userId, onFinished, onExited }) {
+  const webviewRef = useRef(null);
+
+  const uri = `https://verify.urtentic.com?clientId=${encodeURIComponent(CLIENT_ID)}&flowId=${encodeURIComponent(FLOW_ID)}&metadata=${encodeURIComponent(JSON.stringify({ userId }))}`;
+
+  // Inject a listener that forwards postMessage events to React Native
+  const injectedJS = `
+    window.addEventListener('message', function(event) {
+      const expectedOrigin = new URL('https://verify.urtentic.com').origin;
+      if (event.origin !== expectedOrigin) return;
+      const data = event.data;
+      if (data && (
+        data.type === 'verificationComplete' ||
+        data.type === 'verificationStarted' ||
+        data.type === 'verificationExited'
+      )) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(data));
+      }
+    }, false);
+    true;
+  `;
+
+  const handleMessage = (event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'verificationComplete') {
+        onFinished(data.type);
+      } else if (data.type === 'verificationExited') {
+        onExited();
+      }
+    } catch (e) {
+      console.error('Urtentic bridge error:', e);
+    }
+  };
+
+  return (
+    <WebView
+      ref={webviewRef}
+      source={{ uri }}
+      injectedJavaScript={injectedJS}
+      onMessage={handleMessage}
+      mediaPlaybackRequiresUserAction={false}
+      allowsInlineMediaPlayback={true}
+      javaScriptEnabled={true}
+    />
+  );
+}
+```
+
+### React Native Permissions
+
+```jsx
+import { PermissionsAndroid, Platform } from 'react-native';
+
+async function requestPermissions() {
+  if (Platform.OS === 'android') {
+    await PermissionsAndroid.requestMultiple([
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    ]);
+  }
+  // iOS permissions are handled via Info.plist
+}
+```
+
+## Next Steps
+
+- [Webhooks](/webhooks/overview) — receive authoritative verification results server-side
+- [Direct Link](/sdk/direct-link/getting-started) — if you want a redirect-based flow without a WebView bridge
+- [Verification Processes](/verification-processes/document-verification) — understand what each step verifies

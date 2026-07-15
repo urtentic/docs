@@ -55,7 +55,7 @@ Webhooks are HTTP POST requests that Urtentic sends to your application when spe
 
 | Event Type | Description | Process Types |
 |---|---|---|
-| `step_completed` | Individual step completed | `DOCUMENT_VERIFICATION`, `LIVENESS`, `EMAIL_CHECK`, `LOCATION_INTELLIGENCE`, `WATCHLIST_CHECK`, `VIDEO_AGREEMENT` |
+| `step_completed` | Individual step completed | `DOCUMENT_VERIFICATION`, `LIVENESS`, `EMAIL_CHECK`, `LOCATION_INTELLIGENCE`, `WATCHLIST_CHECK`, `VIDEO_AGREEMENT`, `ADDRESS_VERIFICATION` |
 
 ## Webhook Payload Structure
 
@@ -64,9 +64,9 @@ Webhooks are HTTP POST requests that Urtentic sends to your application when spe
     ```json
     {
       "eventName": "verification_completed",
-      "flowId": "wf_789012ghi345",
+      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
       "timeStamp": "2023-12-01T15:30:00.000Z",
-      "resource": "/api/v1/verifications/id_jkl678mno901",
+      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
       "metadata": {
         "userId": "user_12345",
         "reference": "REF-67890"
@@ -79,24 +79,19 @@ Webhooks are HTTP POST requests that Urtentic sends to your application when spe
     ```json
     {
       "eventName": "step_completed",
-      "flowId": "wf_789012ghi345",
+      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
       "timeStamp": "2023-12-01T15:25:00.000Z",
-      "resource": "/api/v1/verifications/id_jkl678mno901",
+      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
       "metadata": { "userId": "user_12345" },
-      "id": "step_document_verification",
-      "status": 200,
+      "id": "DOCUMENT_VERIFICATION",
+      "status": 1,
       "data": {
-        "extractedData": {
-          "firstName": "John",
-          "lastName": "Smith",
-          "documentType": "PASSPORT"
-        }
-      },
-      "step": {
-        "stepId": "document_verification",
-        "status": 200,
-        "startedAt": "2023-12-01T15:20:00",
-        "completedAt": "2023-12-01T15:25:00"
+        "full_name": "John Smith",
+        "date_of_birth": "1990-05-15",
+        "document_type": "PASSPORT",
+        "country_of_issuance": "USA",
+        "template_matching_result": "PASSED",
+        "alteration_detection_results": "NO_ALTERATIONS_DETECTED"
       }
     }
     ```
@@ -106,9 +101,9 @@ Webhooks are HTTP POST requests that Urtentic sends to your application when spe
     ```json
     {
       "eventName": "verification_abandoned",
-      "flowId": "wf_789012ghi345",
+      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
       "timeStamp": "2023-12-02T15:30:00.000Z",
-      "resource": "/api/v1/verifications/id_jkl678mno901",
+      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
       "metadata": { "userId": "user_12345" },
       "verificationStatus": "ABANDONED"
     }
@@ -118,9 +113,9 @@ Webhooks are HTTP POST requests that Urtentic sends to your application when spe
     ```json
     {
       "eventName": "verification_started",
-      "flowId": "wf_789012ghi345",
+      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
       "timeStamp": "2023-12-01T14:00:00.000Z",
-      "resource": "/api/v1/verifications/id_jkl678mno901",
+      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
       "metadata": { "userId": "user_12345", "reference": "REF-67890" }
     }
     ```
@@ -129,9 +124,9 @@ Webhooks are HTTP POST requests that Urtentic sends to your application when spe
     ```json
     {
       "eventName": "verification_inputs_completed",
-      "flowId": "wf_789012ghi345",
+      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
       "timeStamp": "2023-12-01T15:00:00.000Z",
-      "resource": "/api/v1/verifications/id_jkl678mno901",
+      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
       "metadata": { "userId": "user_12345" }
     }
     ```
@@ -258,6 +253,49 @@ function verifyWebhookSignature($payload, $signature, $secret, $timestamp) {
     return true;
 }
 ?>
+```
+
+```java Java
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.MessageDigest;
+import java.util.Base64;
+
+public class WebhookVerifier {
+
+    public static boolean verifyWebhookSignature(
+        byte[] payload,
+        String signature,
+        String secret,
+        String timestamp
+    ) throws Exception {
+        long currentTime = System.currentTimeMillis() / 1000;
+        if (Math.abs(currentTime - Long.parseLong(timestamp)) > 300) {
+            throw new IllegalArgumentException("Webhook timestamp too old");
+        }
+
+        byte[] secretBytes = Base64.getDecoder().decode(secret);
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secretBytes, "HmacSHA256"));
+        String expectedSignature = bytesToHex(mac.doFinal(payload));
+
+        String incoming = signature.startsWith("sha256=") ? signature.substring(7) : signature;
+
+        if (!MessageDigest.isEqual(
+            incoming.getBytes(),
+            expectedSignature.getBytes()
+        )) {
+            throw new SecurityException("Webhook signature verification failed");
+        }
+        return true;
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) sb.append(String.format("%02x", b));
+        return sb.toString();
+    }
+}
 ```
 
 </CodeGroup>

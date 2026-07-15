@@ -31,7 +31,8 @@
               "verification-processes/location-intelligence",
               "verification-processes/email-verification",
               "verification-processes/video-agreement",
-              "verification-processes/aml-watchlist"
+              "verification-processes/aml-watchlist",
+              "verification-processes/address-verification"
             ]
           },
           {
@@ -46,6 +47,7 @@
             "pages": [
               "sdk/introduction",
               "sdk/web/getting-started",
+              "sdk/mobile/getting-started",
               "sdk/direct-link/getting-started"
             ]
           }
