@@ -79,25 +79,31 @@ verificationButton.addEventListener('urtentic:exitedSdk', (event) => {
 
 ## Using the JavaScript API
 
-For more control over the verification flow, use the JavaScript API directly:
+For more control over the verification flow, use the JavaScript API directly. Call `Urtentic.init()` from any event — here triggered by a custom button:
 
-```javascript
-Urtentic.init({
-    flowId: 'YOUR_FLOW_ID',
-    clientId: 'YOUR_CLIENT_ID',
-    metadata: '{"userId": "123", "customField": "value"}',
-    redirect: 'https://yoursite.com/success',
+```html
+<body>
+    <h1>User Verification</h1>
 
-    userStartedSdk: (detail) => {
-        console.log('User started verification', detail);
-    },
-    userFinishedSdk: (detail) => {
-        console.log('Verification complete', detail);
-    },
-    exitedSdk: (detail) => {
-        console.log('User exited verification', detail);
-    }
-});
+    <button id="verify-btn" style="background-color:#f89090; color:white; padding:12px 24px; border-radius:8px; font-size:18px; border:none; cursor:pointer;">
+        Verify me
+    </button>
+
+    <script src="https://cdn.urtentic.com/v1/urtentic.js"></script>
+    <script>
+      document.getElementById('verify-btn').addEventListener('click', () => {
+          Urtentic.init({
+              flowId: 'YOUR_FLOW_ID',
+              clientId: 'YOUR_CLIENT_ID',
+              metadata: '{"userId": "123", "customField": "value"}',
+              redirect: 'https://yoursite.com/success',
+              userStartedSdk: (detail) => console.log('User started verification', detail),
+              userFinishedSdk: (detail) => console.log('Verification complete', detail),
+              exitedSdk: (detail) => console.log('User exited verification', detail)
+          });
+      });
+    </script>
+</body>
 ```
 
 ## Configuration Parameters
@@ -113,6 +119,25 @@ Urtentic.init({
 | `exitedSdk` | Function | No | Callback when user exits the flow |
 
 ## Customizing the Button
+
+### Button Text
+
+Set the button label by adding text content inside the `<urtentic-button>` element:
+
+```html
+<urtentic-button
+    clientId="YOUR_CLIENT_ID"
+    flowId="YOUR_FLOW_ID"
+    metadata='{"userId": "123"}'>
+    Verify My Identity
+</urtentic-button>
+```
+
+If no text is provided, the button defaults to **"Verify me"**.
+
+### Button Styles
+
+Use the `::part(button)` CSS pseudo-element to style the button to match your brand:
 
 ```css
 urtentic-button::part(button) {
