@@ -16,7 +16,7 @@ info:
     - `Authorization: Bearer {API_KEY}` - Your API key
     - `X-CLIENT-ID: {CLIENT_ID}` - Your client ID
 
-    API credentials can be generated from your Urtentic Dashboard under Settings > API Keys.
+    API credentials can be generated from your Urtentic Dashboard under Integrations.
 
     ## Webhook Notifications
     Configure webhook URLs in your Urtentic Dashboard to receive real-time notifications
@@ -47,7 +47,7 @@ components:
       scheme: bearer
       description: |
         API key for authentication. Pass as Bearer token in Authorization header.
-        Generate API keys from your Urtentic Dashboard under Settings > API Keys.
+        Generate API keys from your Urtentic Dashboard under Integrations.
 
         Example:
         ```
@@ -65,6 +65,23 @@ components:
         X-CLIENT-ID: {your-client-id}
         ```
   schemas:
+    Error:
+      type: object
+      description: |
+        Error body returned by the API. Branch on `code`, which is stable. `message` is either a
+        readable sentence or a message key such as `verification.not.found`.
+      properties:
+        code:
+          type: string
+          example: VERIFICATION_NOT_FOUND
+        message:
+          type: string
+          example: verification.not.found
+        errors:
+          type: array
+          description: Per-field messages for validation errors. Empty otherwise.
+          items:
+            type: string
     FieldValue:
       type: object
       description: |
@@ -635,42 +652,21 @@ paths:
                           countryCode: US
                           countryFlag: 🇺🇸
                           region: North America
-        '400':
-          description: Invalid parameters
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-              examples:
-                invalid_country:
-                  value:
-                    error: INVALID_COUNTRY_CODE
-                    message: The country code 'XX' is not valid
         '404':
           description: Workflow not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/Error'
               examples:
                 workflow_not_found:
                   value:
-                    error: WORKFLOW_NOT_FOUND
-                    message: The specified workflow could not be found
+                    code: WORKFLOW_NOT_FOUND
+                    message: workflow.not.found
       operationId: get-workflow-document-types
       x-stoplight:
         id: xo6oj6cz8e8pe
-  '/workflows/{workflowId}/email-otp':
+  '/workflows/{workflowId}/otp':
     parameters:
       - schema:
           type: string
@@ -681,32 +677,24 @@ paths:
         description: Unique identifier of the workflow
         example: 40f85c69-b27a-46e8-9115-691401acb5df
     post:
-      summary: Send Workflow Email OTP
+      summary: Send Workflow OTP
       tags:
         - Workflow
       security:
         - apiKeyAuth: []
       description: |
-        Sends a one-time password via email to verify the user's email address as part of the workflow.
-        This is typically used during the EMAIL_CHECK verification process.
-        
-        ### Use Cases
-        - Email verification during user onboarding
-        - Confirming a user's email address before completing verification
-        - Adding an extra layer of authentication to the verification process
-        
+        Sends a one-time code by email or SMS for a verification that is in progress.
+        Use it during the EMAIL_CHECK and PHONE_CHECK verification processes.
+
         ### Notes
-        - The OTP code is valid for 10 minutes
-        - Maximum 5 OTP requests per email address per hour
-        - Email templates can be customized in the Urtentic Dashboard
-      responses:
-        '204':
-          description: |
-            OTP email sent successfully. No content is returned in the response body.
-      operationId: post-workflows-workflowId-email-otp
-      x-stoplight:
-        id: gbt71hdu2nfcf
+        - The verification must belong to this workflow and still be in progress
+        - Email codes are free
+        - Each SMS is charged to the organization's wallet when it's sent, at most 5 per verification.
+          If the wallet can't pay, no SMS is sent and the response is `{"sent": false}`: don't ask
+          for a code, submit the phone number without one. See [Billing and usage](/billing).
+      operationId: post-workflows-workflowId-otp
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -715,17 +703,81 @@ paths:
                 key:
                   type: string
                   description: |
-                    The email address or identifier to send the OTP to.
-                    This should be the user's email address that will receive the verification code.
-                  example: "user@example.com"
+                    Where to send the code: an email address for `EMAIL`, or a phone number in
+                    E.164 format for `PHONE`.
+                  example: "+2348012345678"
+                channel:
+                  type: string
+                  enum: [EMAIL, PHONE]
+                  default: EMAIL
+                  description: How to send the code. Defaults to `EMAIL`.
+                verificationId:
+                  type: string
+                  format: uuid
+                  description: The verification the code is for.
+                  example: 85c94e71-6e3f-4a19-b15c-781d8a876542
               required:
                 - key
+                - verificationId
             examples:
-              request:
+              phone:
+                value:
+                  key: "+2348012345678"
+                  channel: PHONE
+                  verificationId: 85c94e71-6e3f-4a19-b15c-781d8a876542
+              email:
                 value:
                   key: "user@example.com"
-        description: |
-          Request body containing the email address to send the OTP to.
+                  channel: EMAIL
+                  verificationId: 85c94e71-6e3f-4a19-b15c-781d8a876542
+      responses:
+        '200':
+          description: Whether a code was sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent:
+                    type: boolean
+                    description: |
+                      `false` when an SMS was skipped because the organization's wallet couldn't
+                      pay for it. Always `true` for email.
+              examples:
+                sent:
+                  value:
+                    sent: true
+                skipped_for_balance:
+                  value:
+                    sent: false
+        '400':
+          description: '`verificationId` is missing (`VERIFICATION_ID_REQUIRED`), or the verification has already finished (`VERIFICATION_NOT_IN_PROGRESS`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missing_verification:
+                  value:
+                    code: VERIFICATION_ID_REQUIRED
+                    message: verification.id.required
+        '404':
+          description: No verification with that ID in this organization and workflow (`VERIFICATION_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: This verification has already had 5 SMS codes sent (`SMS_LIMIT_REACHED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                sms_limit:
+                  value:
+                    code: SMS_LIMIT_REACHED
+                    message: sms.limit.reached
   /verifications:
     post:
       tags:
@@ -800,54 +852,57 @@ paths:
                         value: "true"
                         fieldName: "GALLERY_RESTRICTION"
                         type: "BOOLEAN"
-        '400':
-          description: Invalid workflow ID or metadata
+        '404':
+          description: '`flowId` is missing or is not a workflow of your organization'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                workflow_not_found:
+                  value:
+                    code: WORKFLOW_DOES_NOT_EXISTS
+                    message: workflow.does.not.exists
+        '402':
+          description: |
+            The organization can't start a verification: its plan allowance is used up and its
+            wallet can't cover another (`QUOTA_EXCEEDED`), its trial has ended (`TRIAL_EXPIRED`),
+            a renewal payment failed (`PAYMENT_REQUIRED`) or its subscription was cancelled
+            (`SUBSCRIPTION_REQUIRED`). See [Billing and usage](/billing).
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  error:
+                  code:
                     type: string
+                    enum: [QUOTA_EXCEEDED, TRIAL_EXPIRED, PAYMENT_REQUIRED, SUBSCRIPTION_REQUIRED]
                   message:
                     type: string
+                  tier:
+                    type: string
+                    description: The organization's plan tier
+                  included:
+                    type: integer
+                    description: Verifications included in the plan per period
+                  used:
+                    type: integer
+                    nullable: true
+                    description: Verifications used this period. Only set for `QUOTA_EXCEEDED`.
+                  upgradeUrl:
+                    type: string
               examples:
-                invalid_workflow:
+                quota_and_wallet_exhausted:
                   value:
-                    error: "INVALID_WORKFLOW"
-                    message: "The specified workflow ID is invalid or not found"
+                    code: QUOTA_EXCEEDED
+                    message: Your plan's quota of 500 verifications has been reached and your wallet balance can't cover another one. Upgrade your plan or fund your wallet to continue.
+                    tier: STARTER
+                    included: 500
+                    used: 500
+                    upgradeUrl: /billing/checkout
         '401':
-          description: Invalid API key
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-              examples:
-                invalid_api_key:
-                  value:
-                    error: "INVALID_API_KEY"
-                    message: "The provided API key is invalid or expired"
-        '403':
-          description: Insufficient permissions
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-              examples:
-                insufficient_permissions:
-                  value:
-                    error: "INSUFFICIENT_PERMISSIONS"
-                    message: "Your API key does not have permission to create verifications"
+          description: |
+            Missing or invalid `X-CLIENT-ID` or secret key. The response has no body.
       x-stoplight:
         id: 4vn3wk2ln2x4g
       operationId: post-verification
@@ -978,42 +1033,29 @@ paths:
                     status: "PROCESSING"
                     inputsAccepted: ["SELFIE_VIDEO", "DOCUMENT_TYPE", "FRONT_IMAGE"]
         '400':
-          description: Invalid inputs or missing required files
+          description: A required input is missing, or document photos are incomplete
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-                  missingInputs:
-                    type: array
-                    items:
-                      type: string
+                $ref: '#/components/schemas/Error'
               examples:
-                missing_files:
+                missing_input:
                   value:
-                    error: "MISSING_REQUIRED_FILES"
-                    message: "One or more required files are missing"
+                    code: CUSTOM_ERROR
+                    message: Field SELFIE_VIDEO is required but not provided
+                    errors: []
                     missingInputs: ["BACK_IMAGE"]
         '404':
           description: Verification not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/Error'
               examples:
                 verification_not_found:
                   value:
-                    error: "VERIFICATION_NOT_FOUND"
-                    message: "The specified verification ID was not found"
+                    code: VERIFICATION_NOT_FOUND
+                    message: verification.not.found
       x-stoplight:
         id: sgkyozgto61e1
       operationId: post-send-verification-inputs
@@ -1139,17 +1181,12 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/Error'
               examples:
                 verification_not_found:
                   value:
-                    error: "VERIFICATION_NOT_FOUND"
-                    message: "The specified verification ID was not found"
+                    code: VERIFICATION_NOT_FOUND
+                    message: verification.not.found
       operationId: post-verifications-verificationId-validations-processType
       x-stoplight:
         id: ojcklstk5huw4
@@ -1282,147 +1319,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/Error'
               examples:
                 verification_not_found:
                   value:
-                    error: "VERIFICATION_NOT_FOUND"
-                    message: "The specified verification ID was not found"
+                    code: VERIFICATION_NOT_FOUND
+                    message: verification.not.found
       operationId: get-verification-status
-  '/webhooks/configure':
-    post:
-      summary: Configure Webhook Endpoint
-      tags:
-        - Webhook
-      security:
-        - apiKeyAuth: []
-      description: |
-        Configures a webhook endpoint to receive verification event notifications.
-        This allows your application to receive real-time updates when verification
-        statuses change.
-        
-        ### Use Cases
-        - Setting up real-time verification notifications
-        - Configuring webhook endpoints for your application
-        - Specifying which events should trigger notifications
-        
-        ### Notes
-        - This endpoint requires an API key with webhook configuration permissions
-        - The webhook URL must be publicly accessible and support HTTPS
-        - Webhooks are signed using a secret to verify authenticity
-        - Webhook requests will time out after 10 seconds
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - url
-              properties:
-                url:
-                  type: string
-                  format: uri
-                  description: |
-                    The HTTPS URL that will receive webhook notifications
-                  example: "https://example.com/webhooks/urtentic"
-                secret:
-                  type: string
-                  description: |
-                    Secret key used to sign webhook payloads for verification.
-                    If not provided, a random secret will be generated.
-                  example: "whsec_8fJ9LKps6YtG3xZD7N2W"
-                events:
-                  type: array
-                  description: |
-                    List of events to subscribe to. If empty, all events will be sent.
-                  items:
-                    type: string
-                    enum:
-                      - verification.created
-                      - verification.updated
-                      - verification.completed
-                      - verification.failed
-                      - document.verified
-                      - liveness.verified
-                      - email.verified
-                      - location.verified
-                  example: ["verification.completed", "verification.failed"]
-                active:
-                  type: boolean
-                  description: |
-                    Whether this webhook endpoint is active. Defaults to true.
-                  default: true
-                  example: true
-            examples:
-              webhook_config:
-                value:
-                  url: "https://example.com/webhooks/urtentic"
-                  secret: "whsec_8fJ9LKps6YtG3xZD7N2W"
-                  events: ["verification.completed", "verification.failed"]
-                  active: true
-      responses:
-        '201':
-          description: Webhook endpoint configured successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: Unique identifier for the webhook configuration
-                    example: "wh_7dJ9LKps6YtG3xZD7N2W"
-                  url:
-                    type: string
-                    format: uri
-                    example: "https://example.com/webhooks/urtentic"
-                  secret:
-                    type: string
-                    example: "whsec_8fJ9LKps6YtG3xZD7N2W"
-                  events:
-                    type: array
-                    items:
-                      type: string
-                    example: ["verification.completed", "verification.failed"]
-                  active:
-                    type: boolean
-                    example: true
-                  createdAt:
-                    type: string
-                    format: date-time
-                    example: "2023-06-15T14:30:00Z"
-              examples:
-                success:
-                  value:
-                    id: "wh_7dJ9LKps6YtG3xZD7N2W"
-                    url: "https://example.com/webhooks/urtentic"
-                    secret: "whsec_8fJ9LKps6YtG3xZD7N2W"
-                    events: ["verification.completed", "verification.failed"]
-                    active: true
-                    createdAt: "2023-06-15T14:30:00Z"
-        '400':
-          description: Invalid webhook configuration
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-              examples:
-                invalid_url:
-                  value:
-                    error: "INVALID_WEBHOOK_URL"
-                    message: "Webhook URL must use HTTPS protocol"
-      operationId: post-configure-webhook
 tags:
   - name: Identity
     description: |
@@ -1453,16 +1356,6 @@ tags:
       - Retrieving verification results
       - Validating inputs before submission
       - Tracking verification status
-  - name: Webhook
-    description: |
-      Configuration and management of webhook endpoints for receiving real-time event notifications.
-      
-      The webhook system allows you to:
-      - Receive real-time notifications about verification status changes
-      - Configure multiple webhook endpoints for different environments
-      - Specify which events trigger notifications
-      - Verify webhook signature to ensure authenticity
-      - Track webhook delivery and retry failed deliveries
   - name: Workflow
     description: |
       Creation and management of verification workflows, combining multiple verification processes into customized sequences.

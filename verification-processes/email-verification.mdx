@@ -56,19 +56,20 @@ After submitting the email address, an OTP is automatically sent to the provided
 ### Step 2: (Optional) Resend OTP Code
 
 ```javascript
-const otpResponse = await fetch(`/api/v1/workflows/${workflowId}/email-otp`, {
+const otpResponse = await fetch(`/api/v1/workflows/${workflowId}/otp`, {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${API_KEY}`,
     'X-CLIENT-ID': CLIENT_ID,
     'Content-Type': 'application/json'
   },
-  body: JSON.stringify({ key: "user@example.com" })
+  body: JSON.stringify({ key: "user@example.com", channel: "EMAIL", verificationId })
 });
 
-if (otpResponse.status === 204) {
-  console.log("OTP sent successfully");
+if (!otpResponse.ok) {
+  throw new Error(`Sending the OTP failed with HTTP ${otpResponse.status}`);
 }
+const { sent } = await otpResponse.json(); // always true for email codes
 ```
 
 ### Step 3: Get Verification Results

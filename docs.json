@@ -19,6 +19,7 @@
               "index",
               "getting-started",
               "key-concepts",
+              "billing",
               "webhooks/workflow-management",
               "webhooks/integration"
             ]
@@ -77,13 +78,7 @@
             "pages": [
               "GET /workflows/supported-document-types",
               "GET /workflows/{workflowId}/document-types",
-              "POST /workflows/{workflowId}/email-otp"
-            ]
-          },
-          {
-            "group": "Webhooks",
-            "pages": [
-              "POST /webhooks/configure"
+              "POST /workflows/{workflowId}/otp"
             ]
           }
         ]

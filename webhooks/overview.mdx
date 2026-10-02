@@ -1,72 +1,62 @@
 ---
 title: Overview
-description: Real-time notifications about verification events, allowing your application to respond immediately to status changes.
+description: Get notified about verification events as they happen, instead of polling the API.
 ---
 
-Webhooks are HTTP POST requests that Urtentic sends to your application when specific events occur during the verification process. Instead of continuously checking the API for updates, your application receives instant notifications when verification statuses change.
+Webhooks are HTTP `POST` requests that Urtentic sends to your server when something happens to a verification: it starts, the person submits their inputs, a check finishes, or the verification reaches its final status. Your server receives the event as soon as it happens instead of polling the API.
 
-## Key Benefits
+To set up the URL and secret Urtentic uses, see [Configuration](/webhooks/configuration).
 
-<CardGroup cols={2}>
-  <Card title="Real-time Updates" icon="bolt">
-    Instant notifications when verifications complete or fail without API polling
-  </Card>
-  <Card title="Secure & Reliable" icon="lock">
-    Cryptographically signed payloads with automatic retry mechanism
-  </Card>
-  <Card title="Comprehensive Events" icon="list-check">
-    Verification lifecycle events, step completion, and error notifications
-  </Card>
-  <Card title="Selective Notifications" icon="filter">
-    Choose which events to receive and filter by verification types
-  </Card>
-</CardGroup>
-
-## How Webhooks Work
+## How webhooks work
 
 <Steps>
-  <Step title="Event Occurs">
-    A verification process completes or changes status
+  <Step title="Something happens to a verification">
+    For example, a check finishes or the verification reaches its final status.
   </Step>
-  <Step title="Webhook Triggered">
-    Urtentic prepares a webhook payload and cryptographically signs it
+  <Step title="Urtentic signs the event">
+    The JSON payload is signed with your webhook secret (HMAC-SHA256).
   </Step>
-  <Step title="HTTP Request Sent">
-    POST request sent to your configured endpoint
+  <Step title="Urtentic sends it to your URL">
+    One `POST` request goes to the webhook URL of the verification's workflow, or to your organization's default URL.
   </Step>
-  <Step title="Response Processed">
-    Your endpoint processes the event, responds, and retries if needed
+  <Step title="Your server verifies and handles it">
+    Check the signature, process the event, and respond with a `2xx` status.
   </Step>
 </Steps>
 
-## Supported Events
+## Events
 
-### Verification Lifecycle Events
+Every event is sent. You can't choose a subset, so ignore the ones you don't need.
 
-| Event Type | Description | When Triggered |
+| Event | Sent when |
+|---|---|
+| `verification_started` | A verification is created with `POST /verifications` |
+| `verification_inputs_completed` | The person's inputs are submitted |
+| `step_completed` | One step of a verification process finishes, for example document verification or a phone check |
+| `verification_completed` | The verification reaches its final status |
+| `verification_data_updated` | Someone corrects the verification's extracted data in the dashboard |
+| `verification_abandoned` | The verification was not finished within 24 hours |
+
+## Payloads
+
+Every event has these fields:
+
+| Field | Type | Description |
 |---|---|---|
-| `verification_started` | New verification started | When `POST /verifications` is called |
-| `verification_inputs_completed` | User submitted inputs | When inputs are successfully submitted |
-| `verification_completed` | Verification finished | When verification reaches final status |
-| `verification_data_updated` | Data updated | When document data is manually updated |
-| `verification_abandoned` | Verification abandoned | When verification is marked stale (>24 hours) |
-
-### Step-Specific Events
-
-| Event Type | Description | Process Types |
-|---|---|---|
-| `step_completed` | Individual step completed | `DOCUMENT_VERIFICATION`, `LIVENESS`, `EMAIL_CHECK`, `LOCATION_INTELLIGENCE`, `WATCHLIST_CHECK`, `VIDEO_AGREEMENT`, `ADDRESS_VERIFICATION` |
-
-## Webhook Payload Structure
+| `eventName` | string | One of the events above |
+| `flowId` | string | ID of the verification's workflow |
+| `timeStamp` | string | When the event happened, ISO 8601 with offset, for example `2026-10-02T14:06:40.000+00:00` |
+| `resource` | string | URL of the verification. The verification ID is the last path segment. |
+| `metadata` | object | The `metadata` you passed when starting the verification, echoed back unchanged |
 
 <Tabs>
-  <Tab title="Verification Completed">
+  <Tab title="verification_completed">
     ```json
     {
       "eventName": "verification_completed",
       "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
-      "timeStamp": "2023-12-01T15:30:00.000Z",
-      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+      "timeStamp": "2026-10-02T15:30:00.000+00:00",
+      "resource": "https://api.urtentic.com/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
       "metadata": {
         "userId": "user_12345",
         "reference": "REF-67890"
@@ -74,260 +64,94 @@ Webhooks are HTTP POST requests that Urtentic sends to your application when spe
       "verificationStatus": "SUCCESS"
     }
     ```
+
+    `verificationStatus` is `SUCCESS`, `REJECTED` or `NEEDS_REVIEW`. `verification_data_updated` has the same shape.
   </Tab>
-  <Tab title="Step Completed">
+  <Tab title="step_completed">
     ```json
     {
       "eventName": "step_completed",
       "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
-      "timeStamp": "2023-12-01T15:25:00.000Z",
-      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+      "timeStamp": "2026-10-02T15:25:00.000+00:00",
+      "resource": "https://api.urtentic.com/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
       "metadata": { "userId": "user_12345" },
-      "id": "DOCUMENT_VERIFICATION",
-      "status": 1,
+      "id": "phone-owner-validation",
+      "status": 200,
       "data": {
-        "full_name": "John Smith",
-        "date_of_birth": "1990-05-15",
-        "document_type": "PASSPORT",
-        "country_of_issuance": "USA",
-        "template_matching_result": "PASSED",
-        "alteration_detection_results": "NO_ALTERATIONS_DETECTED"
+        "phone_number": "+2348012345678",
+        "status": "CONFIRMED"
+      },
+      "step": {
+        "stepId": "phone-owner-validation",
+        "status": 200,
+        "data": {
+          "phone_number": "+2348012345678",
+          "status": "CONFIRMED"
+        },
+        "error": null,
+        "startedAt": "2026-10-02T15:24:58.112",
+        "completedAt": "2026-10-02T15:24:58.431"
       }
     }
     ```
-  </Tab>
-  <Tab title="Other Events">
-    **Verification Abandoned:**
-    ```json
-    {
-      "eventName": "verification_abandoned",
-      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
-      "timeStamp": "2023-12-02T15:30:00.000Z",
-      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
-      "metadata": { "userId": "user_12345" },
-      "verificationStatus": "ABANDONED"
-    }
-    ```
 
-    **Verification Started:**
+    | Field | Description |
+    |---|---|
+    | `id` | The step that finished |
+    | `status` | The step's status code. `200` when the step ran normally. |
+    | `data` | What the step found. The shape depends on the step. |
+    | `step` | The full step, including `error` (with `severity`, `errorType` and `message`) and its start and end times |
+  </Tab>
+  <Tab title="Other events">
+    `verification_started` and `verification_inputs_completed` carry only the common fields:
+
     ```json
     {
       "eventName": "verification_started",
       "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
-      "timeStamp": "2023-12-01T14:00:00.000Z",
-      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
+      "timeStamp": "2026-10-02T14:00:00.000+00:00",
+      "resource": "https://api.urtentic.com/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
       "metadata": { "userId": "user_12345", "reference": "REF-67890" }
     }
     ```
 
-    **Verification Inputs Completed:**
-    ```json
-    {
-      "eventName": "verification_inputs_completed",
-      "flowId": "db50ed08-18fa-41e8-9e46-a44aca39f69d",
-      "timeStamp": "2023-12-01T15:00:00.000Z",
-      "resource": "/api/v1/verifications/85c94e71-6e3f-4a19-b15c-781d8a876542",
-      "metadata": { "userId": "user_12345" }
-    }
-    ```
+    `verification_abandoned` adds `"verificationStatus": "ABANDONED"`.
   </Tab>
 </Tabs>
 
-### Payload Fields
-
-#### Base Event Fields
-
-| Field | Type | Description |
-|---|---|---|
-| `eventName` | string | Event type identifier |
-| `flowId` | string | UUID of the workflow |
-| `timeStamp` | string | ISO 8601 timestamp |
-| `resource` | string | API resource path to the verification |
-| `metadata` | object | Custom metadata provided during verification creation |
-
 <Info>
-The `metadata` object is completely flexible and defined by your application. Common fields include `userId`, `reference`, `deviceId`, `sessionId`, etc. This metadata is echoed back in all webhook notifications to help you correlate events with your users.
+`metadata` is yours to define. Put your own user ID or reference in it when you start the verification, and use it to match events to your records.
 </Info>
 
-#### Verification Completed Fields
+## Signatures
 
-| Field | Type | Description |
-|---|---|---|
-| `verificationStatus` | string | Final status (`SUCCESS`, `REJECTED`, `NEEDS_REVIEW`, `ABANDONED`) |
-
-#### Step Completed Fields
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | string | Step identifier |
-| `status` | number | HTTP status code (200 for success) |
-| `data` | object | Step-specific extracted data |
-| `step` | object | Detailed step information including timing and results |
-
-## Security & Authentication
-
-### Webhook Signatures
-
-Every webhook payload is signed using HMAC-SHA256 with your webhook secret:
+Every request carries two headers:
 
 ```http
-POST /webhook HTTP/1.1
-Host: yourapp.com
+POST /webhooks/urtentic HTTP/1.1
 Content-Type: application/json
-x-urtentic-signature: 5d41402abc4b2a76b9719d911017c592
-x-urtentic-timestamp: 1701439800
+x-urtentic-signature: 9f2c4b0e6d1a8e3f5c7b2a4d6e8f0a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f
+x-urtentic-timestamp: 1790950000
 ```
 
-### Signature Verification
+- `x-urtentic-signature` is the hex HMAC-SHA256 of the raw request body. The key is your webhook secret, Base64-decoded.
+- `x-urtentic-timestamp` is when the request was sent, in Unix seconds. It is **not** part of the signature.
 
-<CodeGroup>
+Compute the signature over the raw body bytes, before parsing the JSON. Re-serializing the parsed JSON can change the bytes and break the match. See [Configuration](/webhooks/configuration#verify-the-signature) for examples in several languages.
 
-```javascript Node.js
-const crypto = require('crypto');
+## Delivery
 
-function verifyWebhookSignature(payload, signature, secret, timestamp) {
-  const currentTime = Math.floor(Date.now() / 1000);
-  if (Math.abs(currentTime - timestamp) > 300) {
-    throw new Error('Webhook timestamp too old');
-  }
+- Urtentic sends each event **once**. If your server doesn't respond with a `2xx` status, or can't be reached, the event is not retried.
+- Events are sent in the background, so they can arrive out of order. A `step_completed` event can arrive after `verification_completed`.
+- If neither the workflow nor your organization has a webhook URL, no events are sent.
 
-  const secretBytes = Buffer.from(secret, 'base64');
-  const expectedSignature = crypto
-    .createHmac('sha256', secretBytes)
-    .update(payload, 'utf8')
-    .digest('hex');
+<Warning>
+Because missed events aren't resent, don't rely on webhooks alone for anything you can't afford to miss. If you haven't received `verification_completed` when you expect it, check the verification with the status endpoint, `GET /verifications/{verificationId}/status`.
+</Warning>
 
-  if (signature.startsWith('sha256=')) {
-    signature = signature.substring(7);
-  }
+## Best practices
 
-  if (!crypto.timingSafeEqual(
-    Buffer.from(signature, 'hex'),
-    Buffer.from(expectedSignature, 'hex')
-  )) {
-    throw new Error('Webhook signature verification failed');
-  }
-  return true;
-}
-```
-
-```python Python
-import hmac, hashlib, time, base64
-
-def verify_webhook_signature(payload, signature, secret, timestamp):
-    current_time = int(time.time())
-    if abs(current_time - timestamp) > 300:
-        raise ValueError('Webhook timestamp too old')
-
-    secret_bytes = base64.b64decode(secret)
-    expected_signature = hmac.new(
-        secret_bytes, payload.encode(), hashlib.sha256
-    ).hexdigest()
-
-    if signature.startswith('sha256='):
-        signature = signature[7:]
-
-    if not hmac.compare_digest(signature, expected_signature):
-        raise ValueError('Webhook signature verification failed')
-    return True
-```
-
-```php PHP
-<?php
-function verifyWebhookSignature($payload, $signature, $secret, $timestamp) {
-    $currentTime = time();
-    if (abs($currentTime - $timestamp) > 300) {
-        throw new Exception('Webhook timestamp too old');
-    }
-
-    $secretBytes = base64_decode($secret);
-    $expectedSignature = hash_hmac('sha256', $payload, $secretBytes);
-
-    if (strpos($signature, 'sha256=') === 0) {
-        $signature = substr($signature, 7);
-    }
-
-    if (!hash_equals($expectedSignature, $signature)) {
-        throw new Exception('Webhook signature verification failed');
-    }
-    return true;
-}
-?>
-```
-
-```java Java
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.security.MessageDigest;
-import java.util.Base64;
-
-public class WebhookVerifier {
-
-    public static boolean verifyWebhookSignature(
-        byte[] payload,
-        String signature,
-        String secret,
-        String timestamp
-    ) throws Exception {
-        long currentTime = System.currentTimeMillis() / 1000;
-        if (Math.abs(currentTime - Long.parseLong(timestamp)) > 300) {
-            throw new IllegalArgumentException("Webhook timestamp too old");
-        }
-
-        byte[] secretBytes = Base64.getDecoder().decode(secret);
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(secretBytes, "HmacSHA256"));
-        String expectedSignature = bytesToHex(mac.doFinal(payload));
-
-        String incoming = signature.startsWith("sha256=") ? signature.substring(7) : signature;
-
-        if (!MessageDigest.isEqual(
-            incoming.getBytes(),
-            expectedSignature.getBytes()
-        )) {
-            throw new SecurityException("Webhook signature verification failed");
-        }
-        return true;
-    }
-
-    private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) sb.append(String.format("%02x", b));
-        return sb.toString();
-    }
-}
-```
-
-</CodeGroup>
-
-### Best Practices
-
-- **Always verify signatures** to ensure webhooks are from Urtentic
-- **Check timestamps** to prevent replay attacks
-- **Use HTTPS endpoints** for webhook URLs
-- **Return appropriate HTTP status codes** (200 for success)
-- **Process webhooks idempotently** using the event ID
-
-## Retry Policy
-
-Urtentic automatically retries failed webhook deliveries:
-
-| Retry | Delay |
-|---|---|
-| Initial | After 1 minute |
-| Second | After 5 minutes |
-| Third | After 15 minutes |
-| Fourth | After 1 hour |
-| Final | After 6 hours |
-
-<Note>
-Webhooks are considered failed if: non-2xx response, no response within 10 seconds, network error, or SSL error.
-</Note>
-
-## Webhook Configuration
-
-<Frame>
-  <img src="/images/screenshots/webhook-settings.png" alt="Webhook Settings" />
-</Frame>
-
-Configure your webhook endpoints in the dashboard to receive real-time notifications about verification events.
+- **Verify the signature** on every request before trusting it.
+- **Respond quickly.** Return `2xx` as soon as you've stored the event, and do slow work afterwards.
+- **Make handling idempotent.** Events have no ID of their own, so deduplicate on `eventName` plus the verification ID from `resource` (plus `id` for `step_completed`).
+- **Use HTTPS.** The dashboard only accepts `https://` webhook URLs.

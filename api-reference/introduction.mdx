@@ -46,13 +46,11 @@ API credentials can be generated from your [Urtentic Dashboard](https://app.urte
 |---|---|---|
 | `GET` | `/workflows/supported-document-types` | Get all supported document types |
 | `GET` | `/workflows/{id}/document-types` | Get document types for a workflow |
-| `POST` | `/workflows/{id}/email-otp` | Send email OTP |
+| `POST` | `/workflows/{id}/otp` | Send an email or SMS one-time code |
 
-### Webhook
+### Webhooks
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/webhooks/configure` | Configure a webhook endpoint |
+Webhook URLs and secrets are set in the dashboard, not through the API. See [Webhook configuration](/webhooks/configuration).
 
 ## Error Handling
 
@@ -65,24 +63,37 @@ The API uses standard HTTP status codes:
 | `204` | No Content (success, no body) |
 | `400` | Bad Request - invalid input |
 | `401` | Unauthorized - invalid API key |
+| `402` | Payment Required - the organization's plan or wallet can't pay for this. See [Billing and usage](/billing) |
 | `403` | Forbidden - insufficient permissions |
 | `404` | Not Found |
 | `429` | Rate Limited |
 
-Error responses include a JSON body:
+Error responses include a JSON body. Branch on `code`, which is stable. `message` is either a readable sentence or a message key such as `verification.not.found`. For validation errors, `errors` lists a message per invalid field.
 
 ```json
 {
-  "error": "INVALID_WORKFLOW",
-  "message": "The specified workflow ID is invalid or not found"
+  "code": "VERIFICATION_NOT_FOUND",
+  "message": "verification.not.found",
+  "errors": []
 }
 ```
 
-## Rate Limits
+<Note>
+A `401` from a missing or invalid API key has no body.
+</Note>
+
+## Rate limits
+
+Limits are per client IP address. Going over a limit returns `429` with the code `RATE_LIMIT_EXCEEDED`.
+
+| Endpoint | Limit |
+|---|---|
+| `POST /verifications/{id}/send-inputs` | 20 requests per minute |
+| `POST /verifications/{id}/validations/{processType}` | 20 requests per minute |
+| `POST /workflows/{id}/otp` | 5 SMS codes per verification (`SMS_LIMIT_REACHED`). Email codes have no limit. |
 
 <Warning>
-- OTP requests: Maximum 5 per email address per hour
-- Webhook deliveries timeout after 10 seconds
+Webhook events are sent once and aren't retried if your server doesn't respond with `2xx`. See [Webhooks](/webhooks/overview#delivery).
 </Warning>
 
 ## Support
