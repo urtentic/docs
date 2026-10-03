@@ -93,7 +93,7 @@ Limits are per client IP address. Going over a limit returns `429` with the code
 | `POST /workflows/{id}/otp` | 5 SMS codes per verification (`SMS_LIMIT_REACHED`). Email codes have no limit. |
 
 <Warning>
-Webhook events are sent once and aren't retried if your server doesn't respond with `2xx`. See [Webhooks](/webhooks/overview#delivery).
+A webhook event is retried up to 5 times over about 10 minutes when your server responds with `5xx` or `429`, or doesn't respond within 30 seconds. Any other `4xx` drops it straight away. See [Delivery and retries](/webhooks/overview#delivery-and-retries).
 </Warning>
 
 ## Support

@@ -35,7 +35,7 @@ Every event is sent. You can't choose a subset, so ignore the ones you don't nee
 | `step_completed` | One step of a verification process finishes, for example document verification or a phone check |
 | `verification_completed` | The verification reaches its final status |
 | `verification_data_updated` | Someone corrects the verification's extracted data in the dashboard |
-| `verification_abandoned` | The verification was not finished within 24 hours |
+| `verification_abandoned` | The person's inputs weren't submitted within 24 hours of the verification being created. The verification is then deleted. |
 
 ## Payloads
 
@@ -139,19 +139,47 @@ x-urtentic-timestamp: 1790950000
 
 Compute the signature over the raw body bytes, before parsing the JSON. Re-serializing the parsed JSON can change the bytes and break the match. See [Configuration](/webhooks/configuration#verify-the-signature) for examples in several languages.
 
-## Delivery
+## Delivery and retries
 
-- Urtentic sends each event **once**. If your server doesn't respond with a `2xx` status, or can't be reached, the event is not retried.
-- Events are sent in the background, so they can arrive out of order. A `step_completed` event can arrive after `verification_completed`.
+Your server has 30 seconds to respond to each request. A `2xx` response means the event was delivered.
+
+If delivery fails, Urtentic tries again, up to **5 attempts** in total:
+
+| Attempt | Sent |
+|---|---|
+| 1 | When the event happens |
+| 2 | 5 seconds after attempt 1 failed |
+| 3 | 10 seconds after attempt 2 failed |
+| 4 | 20 seconds after attempt 3 failed |
+| 5 | 40 seconds after attempt 4 failed |
+
+All attempts happen within 10 minutes of the event. After the last failed attempt, the event is dropped.
+
+Whether a failure is retried depends on what went wrong:
+
+| Your server's response | Retried |
+|---|---|
+| `5xx`, or no response within 30 seconds | Yes |
+| `429 Too Many Requests` | Yes |
+| Connection refused, DNS failure or TLS error | Yes |
+| Any other `4xx`, for example `400`, `401`, `404` | No, the event is dropped straight away |
+
+Respond with a `4xx` only when you never want that event again. If your server is temporarily unable to process events, respond with `503` or `429` so they're retried.
+
+Every attempt carries the same body and the same `x-urtentic-signature`. Only `x-urtentic-timestamp` changes.
+
+- Events are sent independently, so they can arrive out of order. A `step_completed` event can arrive after `verification_completed`.
+- A retry can deliver an event your server already processed, for example when it handled the request but responded after the 30-second timeout.
 - If neither the workflow nor your organization has a webhook URL, no events are sent.
 
 <Warning>
-Because missed events aren't resent, don't rely on webhooks alone for anything you can't afford to miss. If you haven't received `verification_completed` when you expect it, check the verification with the status endpoint, `GET /verifications/{verificationId}/status`.
+An event can still be dropped, after a rejected `4xx` or after all 5 attempts failed, so don't rely on webhooks alone for anything you can't afford to miss. If you haven't received `verification_completed` when you expect it, check the verification with the status endpoint, `GET /verifications/{verificationId}/status`.
 </Warning>
 
 ## Best practices
 
 - **Verify the signature** on every request before trusting it.
-- **Respond quickly.** Return `2xx` as soon as you've stored the event, and do slow work afterwards.
-- **Make handling idempotent.** Events have no ID of their own, so deduplicate on `eventName` plus the verification ID from `resource` (plus `id` for `step_completed`).
+- **Respond quickly.** Return `2xx` as soon as you've stored the event, and do slow work afterwards. A response after 30 seconds counts as a failure and the event is sent again.
+- **Make handling idempotent.** Retries can deliver the same event twice, and events have no ID of their own, so deduplicate on `eventName` plus the verification ID from `resource` (plus `id` for `step_completed`).
+- **Use the right status code.** `4xx` stops retries for that event. Use `5xx` or `429` when you want it sent again.
 - **Use HTTPS.** The dashboard only accepts `https://` webhook URLs.

@@ -53,7 +53,7 @@ To verify signatures today, create a workflow secret for each workflow you recei
 - **Organization default secret:** rotating your API keys on the **Integrations** page also replaces the organization default secret. Any workflow without its own secret is signed with the new one from then on.
 
 <Warning>
-There's no overlap period after a rotation. Events signed with the new secret fail verification until your server has it, and failed deliveries aren't retried.
+There's no overlap period after a rotation. Events signed with the new secret fail verification until your server has it. If your server rejects them with `401`, they're dropped and not retried, so update the secret before or immediately after rotating.
 </Warning>
 
 ## Verify the signature
@@ -180,4 +180,5 @@ public class UrtenticWebhookController {
 | Every signature fails | You're using the secret for the right source: the workflow secret if the workflow has one, otherwise the organization default |
 | Signatures started failing | A secret was rotated, either the workflow secret or the organization default through an API key rotation |
 | Some signatures fail | You're hashing the raw body, not re-serialized JSON |
-| An event is missing | Failed deliveries aren't retried. Check the verification with `GET /verifications/{verificationId}/status`. |
+| An event is missing | Your server answered with a `4xx` (not retried), or all 5 attempts over about 10 minutes failed. Check the verification with `GET /verifications/{verificationId}/status`. See [Delivery and retries](/webhooks/overview#delivery-and-retries). |
+| The same event arrived twice | Your server took longer than 30 seconds to respond, so the event was sent again. Respond sooner and deduplicate events. |
