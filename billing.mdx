@@ -1,40 +1,34 @@
 ---
 title: Billing and usage
-description: How verifications are paid for on a plan or on pay-as-you-go, which checks are charged per use, and what your integration sees when an organization can't pay.
+description: How verifications are paid for - in the free trial, on a plan, or from credits with no plan - which checks are charged per use, and what your integration sees when an organization can't pay.
 ---
 
-An Urtentic organization pays for verifications with a plan or with pay-as-you-go. This page explains how a verification is paid for and how to handle the responses your integration gets when an organization can't pay. Plans, the price of every check and a cost calculator are on the **Billing** page of the [dashboard](https://app.urtentic.com), under **Plans & pricing**. **Overview** shows the current plan, usage and credit balance, and **History** lists payments and credit activity.
+An Urtentic organization starts on a free trial. After that it pays for verifications with a plan, or, with no plan, from its credits as it goes. This page explains how a verification is paid for and how to handle the responses your integration gets when an organization can't pay. Plans, the price of every check and a cost calculator are on the **Billing** page of the [dashboard](https://app.urtentic.com), under **Plans & pricing**. **Overview** shows the current plan, usage and credit balance, and **History** lists payments and credit activity.
 
-## Plans and pay-as-you-go
+## Free trial, plans, and paying as you go
 
-| | Free trial | Plan | Pay-as-you-go |
+| | Free trial | Plan | No plan (pay as you go) |
 |---|---|---|---|
 | Monthly fee | None | Yes, or yearly at 16% off | None |
 | Included verifications | 50, for 14 days | Set by the plan | None |
-| Beyond what's included | Refused | Paid from credits at plan prices | Every verification is paid from credits at pay-as-you-go prices |
-| Phone, government and watchlist checks | Not available | Paid from credits per use | Paid from credits per use, at the same price as on a plan |
+| Beyond what's included | Paid from credits at pay-as-you-go prices | Paid from credits at plan prices | Every verification is paid from credits at pay-as-you-go prices |
+| Phone, government and watchlist checks | Paid from credits per use | Paid from credits per use | Paid from credits per use |
 
-Pay-as-you-go has its own, higher price for each check a plan includes, so a plan becomes the cheaper choice as volume grows. Phone, government and watchlist checks cost the same either way.
+New organizations start on the free trial. When it ends, an organization with no plan simply pays for each verification from its credits - there's nothing to switch to. The same applies when a plan stops: once it's cancelled, or once a failed renewal payment's grace period is over. Choosing a plan is a checkout on **Billing** > **Plans & pricing**, and the plan starts straight away.
 
-New organizations start on the free trial. When it ends, they choose a plan or switch to pay-as-you-go to keep verifying.
-
-The organization's owner or an admin switches on **Billing** > **Plans & pricing**:
-
-- **From the trial to pay-as-you-go:** straight away.
-- **From a paid plan to pay-as-you-go:** the plan stays until the end of the period already paid for, then doesn't renew, and pay-as-you-go starts. A scheduled switch can't be undone, but the organization can choose a plan again at any time.
-- **From pay-as-you-go to a plan:** a normal checkout. The plan starts straight away.
+Paying as you go has its own, higher price for each check a plan includes, so a plan becomes the cheaper choice as volume grows. Phone, government and watchlist checks cost the same either way.
 
 ## How a verification is paid for
 
 <Steps>
-  <Step title="Plan allowance first">
-    On a plan, a number of verifications per billing period is included. While that allowance lasts, a new verification is covered by the plan.
+  <Step title="Included verifications first">
+    A plan includes a number of verifications per billing period, and the free trial includes 50. While those last, a new verification is covered.
   </Step>
   <Step title="Credits after that">
-    Once the allowance is used up, and for every verification on pay-as-you-go, a verification is paid from the organization's credits. It costs the sum of the prices of its workflow's plan-covered checks (document verification, liveness, video agreement, proof of residency, location intelligence, email check): the plan price on a plan, the pay-as-you-go price on pay-as-you-go. The amount is reserved when the verification starts and charged when it finishes.
+    Beyond them, and for every verification with no plan, a verification is paid from the organization's credits. It costs the sum of the prices of its workflow's plan-covered checks (document verification, liveness, video agreement, proof of residency, location intelligence, email check): the plan price on a plan, the pay-as-you-go price otherwise. The amount is reserved when the verification starts and charged when it finishes.
   </Step>
-  <Step title="Refused when neither can pay">
-    If there's no allowance left and the credits can't cover another verification, starting one fails with HTTP `402`. See [Handling HTTP 402](#handling-http-402).
+  <Step title="Refused when credits can't pay">
+    If nothing includes the verification and the credits can't cover it, starting one fails with HTTP `402`. See [Handling HTTP 402](#handling-http-402).
   </Step>
 </Steps>
 
@@ -43,15 +37,15 @@ A verification only counts towards the plan, or is charged to credits, when it f
 - Verifications that end `ABANDONED`.
 - Verifications rejected only because of a failure on our side, where every serious step error is `internal-error` or `network-error`.
 
-Charges are rounded up to the next cent. The current price of each check, on a plan and on pay-as-you-go, is on **Billing** > **Plans & pricing** > **Price per check**.
+Charges are rounded up to the next cent. The current price of each check, on a plan and paying as you go, is on **Billing** > **Plans & pricing** > **Pay as you go** > **Price per check**.
 
 ## Checks charged per use
 
-Phone verification, government database checks and watchlist screening pay a third party every time they run, so they are never covered by a plan. Each use is paid from credits, on every plan and on pay-as-you-go. They aren't available on the free trial.
+Phone verification, government database checks and watchlist screening pay a third party every time they run, so they are never covered by a plan. Each use is paid from credits - on a plan, in the free trial, and with no plan - so they need credits: a verification whose workflow uses them is refused while the organization has none.
 
 | Check | When it's charged | If the credits can't pay |
 |---|---|---|
-| Phone check | Each confirmation SMS, when it's sent. At most 5 per verification. | No SMS is sent. The verification ends `NEEDS_REVIEW`. |
+| Phone check | Each confirmation SMS, when it's sent: the first code and every resend, with no limit. | No SMS is sent. The verification ends `NEEDS_REVIEW`. |
 | Government check | Each lookup, once per verification. The price depends on the database (BVN, NIN, driver's licence or voter's card). | The lookup is skipped. The verification ends `NEEDS_REVIEW`. |
 | Watchlist screening | Each screening, once per verification | The screening is skipped. The verification ends `NEEDS_REVIEW`. |
 
@@ -59,7 +53,7 @@ If the SMS provider, the government database or the screening provider fails, th
 
 ## Credits
 
-Credits are a prepaid balance: one credit is one US dollar. The organization's owner or an admin buys them from **Billing** > **Overview**, between 10 and 10,000 USD at a time. The owner is emailed when the balance drops below 5 USD.
+Credits are a prepaid balance: one credit is one US dollar. The organization's owner or an admin buys them from **Billing** > **Overview**, between 10 and 10,000 USD at a time. The owner is emailed when the balance drops below 5 USD, or below the amount the organization sets on the Credits card.
 
 <Warning>
 Credits don't expire, but they can't be withdrawn or refunded.
@@ -71,11 +65,8 @@ Credits don't expire, but they can't be withdrawn or refunded.
 
 | `code` | Meaning | What the organization needs to do |
 |---|---|---|
-| `QUOTA_EXCEEDED` | The plan's allowance is used up, or the organization is on pay-as-you-go, and its credits can't cover another verification | Buy credits or move to a bigger plan |
-| `TRIAL_EXPIRED` | The free trial has ended | Choose a plan or switch to pay-as-you-go |
-| `PAID_PLAN_REQUIRED` | The workflow uses a check that isn't in the free trial (phone, government or watchlist) | Choose a plan or switch to pay-as-you-go, or remove the check from the workflow |
-| `PAYMENT_REQUIRED` | A renewal payment failed and the 7-day grace period is over | Update the payment method |
-| `SUBSCRIPTION_REQUIRED` | The subscription was cancelled | Choose a plan |
+| `QUOTA_EXCEEDED` | Nothing includes the verification - the plan's or trial's allowance is used up, or the organization has no plan - and its credits can't cover it | Buy credits or choose a (bigger) plan |
+| `CREDITS_REQUIRED` | The workflow uses a check paid per use (phone, government or watchlist) and the organization has no credits | Buy credits, or remove the check from the workflow |
 
 ```json 402 response
 {
@@ -88,9 +79,7 @@ Credits don't expire, but they can't be withdrawn or refunded.
 }
 ```
 
-`used` is only set for `QUOTA_EXCEEDED`. During the 7-day grace period after a failed renewal payment, verifications keep working.
-
-Saving a workflow in the dashboard or through the API returns the same `402` with `PAID_PLAN_REQUIRED` when an organization on the free trial adds phone, government or watchlist checks to it.
+`used` is only set for `QUOTA_EXCEEDED`. During the 7-day grace period after a failed renewal payment, the plan keeps working; after it, the organization has no plan and pays from its credits.
 
 <CodeGroup>
 ```javascript JavaScript
@@ -163,7 +152,6 @@ The response says whether a code was actually sent:
 | `400` | `VERIFICATION_ID_REQUIRED` | `verificationId` is missing |
 | `400` | `VERIFICATION_NOT_IN_PROGRESS` | The verification has already finished |
 | `404` | `VERIFICATION_NOT_FOUND` | No verification with that ID in this organization and workflow |
-| `429` | `SMS_LIMIT_REACHED` | This verification has already had 5 codes sent |
 
 ## Spotting a skipped check in results
 
