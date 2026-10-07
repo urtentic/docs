@@ -689,8 +689,8 @@ paths:
         ### Notes
         - The verification must belong to this workflow and still be in progress
         - Email codes are free
-        - Each SMS is charged to the organization's wallet when it's sent, at most 5 per verification.
-          If the wallet can't pay, no SMS is sent and the response is `{"sent": false}`: don't ask
+        - Each SMS is paid from the organization's credits when it's sent, at most 5 per verification.
+          If the credits can't pay, no SMS is sent and the response is `{"sent": false}`: don't ask
           for a code, submit the phone number without one. See [Billing and usage](/billing).
       operationId: post-workflows-workflowId-otp
       requestBody:
@@ -741,7 +741,7 @@ paths:
                   sent:
                     type: boolean
                     description: |
-                      `false` when an SMS was skipped because the organization's wallet couldn't
+                      `false` when an SMS was skipped because the organization's credits couldn't
                       pay for it. Always `true` for email.
               examples:
                 sent:
@@ -865,10 +865,11 @@ paths:
                     message: workflow.does.not.exists
         '402':
           description: |
-            The organization can't start a verification: its plan allowance is used up and its
-            wallet can't cover another (`QUOTA_EXCEEDED`), its trial has ended (`TRIAL_EXPIRED`),
-            a renewal payment failed (`PAYMENT_REQUIRED`) or its subscription was cancelled
-            (`SUBSCRIPTION_REQUIRED`). See [Billing and usage](/billing).
+            The organization can't start a verification: it has no plan allowance left (or is on
+            pay-as-you-go) and its credits can't cover another (`QUOTA_EXCEEDED`), its trial has
+            ended (`TRIAL_EXPIRED`), the workflow uses a check that isn't in the free trial
+            (`PAID_PLAN_REQUIRED`), a renewal payment failed (`PAYMENT_REQUIRED`) or its
+            subscription was cancelled (`SUBSCRIPTION_REQUIRED`). See [Billing and usage](/billing).
           content:
             application/json:
               schema:
@@ -876,7 +877,7 @@ paths:
                 properties:
                   code:
                     type: string
-                    enum: [QUOTA_EXCEEDED, TRIAL_EXPIRED, PAYMENT_REQUIRED, SUBSCRIPTION_REQUIRED]
+                    enum: [QUOTA_EXCEEDED, TRIAL_EXPIRED, PAID_PLAN_REQUIRED, PAYMENT_REQUIRED, SUBSCRIPTION_REQUIRED]
                   message:
                     type: string
                   tier:
@@ -892,10 +893,10 @@ paths:
                   upgradeUrl:
                     type: string
               examples:
-                quota_and_wallet_exhausted:
+                quota_and_credits_exhausted:
                   value:
                     code: QUOTA_EXCEEDED
-                    message: Your plan's quota of 500 verifications has been reached and your wallet balance can't cover another one. Upgrade your plan or fund your wallet to continue.
+                    message: Your plan's quota of 500 verifications has been reached and your credit balance can't cover another one. Upgrade your plan or buy credits to continue.
                     tier: STARTER
                     included: 500
                     used: 500

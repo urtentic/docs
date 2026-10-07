@@ -1,40 +1,55 @@
 ---
 title: Billing and usage
-description: How verifications are paid for, which checks are charged per use, and what your integration sees when an organization can't pay.
+description: How verifications are paid for on a plan or on pay-as-you-go, which checks are charged per use, and what your integration sees when an organization can't pay.
 ---
 
-Every Urtentic organization is on a plan. This page explains how a verification is paid for and how to handle the responses your integration gets when an organization runs out of allowance or wallet balance. Plans and prices are on the **Billing** page of the [dashboard](https://app.urtentic.com).
+An Urtentic organization pays for verifications with a plan or with pay-as-you-go. This page explains how a verification is paid for and how to handle the responses your integration gets when an organization can't pay. Plans, the price of every check and a cost calculator are on the **Billing** page of the [dashboard](https://app.urtentic.com), under **Plans & pricing**. **Overview** shows the current plan, usage and credit balance, and **History** lists payments and credit activity.
+
+## Plans and pay-as-you-go
+
+| | Free trial | Plan | Pay-as-you-go |
+|---|---|---|---|
+| Monthly fee | None | Yes, or yearly at 16% off | None |
+| Included verifications | 50, for 14 days | Set by the plan | None |
+| Beyond what's included | Refused | Paid from credits at plan prices | Every verification is paid from credits at pay-as-you-go prices |
+| Phone, government and watchlist checks | Not available | Paid from credits per use | Paid from credits per use, at the same price as on a plan |
+
+Pay-as-you-go has its own, higher price for each check a plan includes, so a plan becomes the cheaper choice as volume grows. Phone, government and watchlist checks cost the same either way.
+
+New organizations start on the free trial. When it ends, they choose a plan or switch to pay-as-you-go to keep verifying.
+
+The organization's owner or an admin switches on **Billing** > **Plans & pricing**:
+
+- **From the trial to pay-as-you-go:** straight away.
+- **From a paid plan to pay-as-you-go:** the plan stays until the end of the period already paid for, then doesn't renew, and pay-as-you-go starts. A scheduled switch can't be undone, but the organization can choose a plan again at any time.
+- **From pay-as-you-go to a plan:** a normal checkout. The plan starts straight away.
 
 ## How a verification is paid for
 
 <Steps>
   <Step title="Plan allowance first">
-    Each plan includes a number of verifications per billing period. While that allowance lasts, a new verification is covered by the plan.
+    On a plan, a number of verifications per billing period is included. While that allowance lasts, a new verification is covered by the plan.
   </Step>
-  <Step title="Wallet after that">
-    Once the allowance is used up, each new verification is paid from the organization's prepaid USD wallet. It costs the sum of the prices of its workflow's plan-covered checks (document verification, liveness, video agreement, proof of residency, location intelligence, email check). The amount is reserved when the verification starts and charged when it finishes.
+  <Step title="Credits after that">
+    Once the allowance is used up, and for every verification on pay-as-you-go, a verification is paid from the organization's credits. It costs the sum of the prices of its workflow's plan-covered checks (document verification, liveness, video agreement, proof of residency, location intelligence, email check): the plan price on a plan, the pay-as-you-go price on pay-as-you-go. The amount is reserved when the verification starts and charged when it finishes.
   </Step>
   <Step title="Refused when neither can pay">
-    If the allowance is used up and the wallet can't cover another verification, starting one fails with HTTP `402`. See [Handling HTTP 402](#handling-http-402).
+    If there's no allowance left and the credits can't cover another verification, starting one fails with HTTP `402`. See [Handling HTTP 402](#handling-http-402).
   </Step>
 </Steps>
 
-A verification only counts towards the plan, or is charged to the wallet, when it finishes as `SUCCESS`, `REJECTED` or `NEEDS_REVIEW`. These cost nothing:
+A verification only counts towards the plan, or is charged to credits, when it finishes as `SUCCESS`, `REJECTED` or `NEEDS_REVIEW`. These cost nothing:
 
 - Verifications that end `ABANDONED`.
 - Verifications rejected only because of a failure on our side, where every serious step error is `internal-error` or `network-error`.
 
-Wallet charges are rounded up to the next cent. Each check's current price is shown on its card in the workflow builder.
-
-<Note>
-New organizations start with a 14-day free trial that includes 50 verifications.
-</Note>
+Charges are rounded up to the next cent. The current price of each check, on a plan and on pay-as-you-go, is on **Billing** > **Plans & pricing** > **Price per check**.
 
 ## Checks charged per use
 
-Phone verification, government database checks and watchlist screening pay a third party every time they run, so they are never covered by the plan. Each use is charged to the wallet, on every plan.
+Phone verification, government database checks and watchlist screening pay a third party every time they run, so they are never covered by a plan. Each use is paid from credits, on every plan and on pay-as-you-go. They aren't available on the free trial.
 
-| Check | When it's charged | If the wallet can't pay |
+| Check | When it's charged | If the credits can't pay |
 |---|---|---|
 | Phone check | Each confirmation SMS, when it's sent. At most 5 per verification. | No SMS is sent. The verification ends `NEEDS_REVIEW`. |
 | Government check | Each lookup, once per verification. The price depends on the database (BVN, NIN, driver's licence or voter's card). | The lookup is skipped. The verification ends `NEEDS_REVIEW`. |
@@ -42,12 +57,12 @@ Phone verification, government database checks and watchlist screening pay a thi
 
 If the SMS provider, the government database or the screening provider fails, the charge is refunded automatically.
 
-## The wallet
+## Credits
 
-The wallet is a prepaid USD balance. The organization's owner or an admin funds it from **Billing** > **Wallet**, between 10 and 10,000 USD per top-up. The owner is emailed when the balance drops below 5 USD.
+Credits are a prepaid balance: one credit is one US dollar. The organization's owner or an admin buys them from **Billing** > **Overview**, between 10 and 10,000 USD at a time. The owner is emailed when the balance drops below 5 USD.
 
 <Warning>
-Wallet funds don't expire, but they can't be withdrawn or refunded.
+Credits don't expire, but they can't be withdrawn or refunded.
 </Warning>
 
 ## Handling HTTP 402
@@ -56,15 +71,16 @@ Wallet funds don't expire, but they can't be withdrawn or refunded.
 
 | `code` | Meaning | What the organization needs to do |
 |---|---|---|
-| `QUOTA_EXCEEDED` | The plan's allowance is used up and the wallet can't cover another verification | Fund the wallet or move to a bigger plan |
-| `TRIAL_EXPIRED` | The free trial has ended | Choose a plan |
+| `QUOTA_EXCEEDED` | The plan's allowance is used up, or the organization is on pay-as-you-go, and its credits can't cover another verification | Buy credits or move to a bigger plan |
+| `TRIAL_EXPIRED` | The free trial has ended | Choose a plan or switch to pay-as-you-go |
+| `PAID_PLAN_REQUIRED` | The workflow uses a check that isn't in the free trial (phone, government or watchlist) | Choose a plan or switch to pay-as-you-go, or remove the check from the workflow |
 | `PAYMENT_REQUIRED` | A renewal payment failed and the 7-day grace period is over | Update the payment method |
 | `SUBSCRIPTION_REQUIRED` | The subscription was cancelled | Choose a plan |
 
 ```json 402 response
 {
   "code": "QUOTA_EXCEEDED",
-  "message": "Your plan's quota of 500 verifications has been reached and your wallet balance can't cover another one. Upgrade your plan or fund your wallet to continue.",
+  "message": "Your plan's quota of 500 verifications has been reached and your credit balance can't cover another one. Upgrade your plan or buy credits to continue.",
   "tier": "STARTER",
   "included": 500,
   "used": 500,
@@ -73,6 +89,8 @@ Wallet funds don't expire, but they can't be withdrawn or refunded.
 ```
 
 `used` is only set for `QUOTA_EXCEEDED`. During the 7-day grace period after a failed renewal payment, verifications keep working.
+
+Saving a workflow in the dashboard or through the API returns the same `402` with `PAID_PLAN_REQUIRED` when an organization on the free trial adds phone, government or watchlist checks to it.
 
 <CodeGroup>
 ```javascript JavaScript
@@ -88,7 +106,7 @@ const response = await fetch("https://api.urtentic.com/api/v1/verifications", {
 
 if (response.status === 402) {
   const { code, message } = await response.json();
-  // Don't retry: ask the organization's owner to fund the wallet or change plan.
+  // Don't retry: ask the organization's owner to buy credits or change plan.
   throw new Error(`Urtentic billing blocked this verification (${code}): ${message}`);
 }
 if (!response.ok) {
@@ -113,14 +131,14 @@ response = requests.post(
 
 if response.status_code == 402:
     body = response.json()
-    # Don't retry: ask the organization's owner to fund the wallet or change plan.
+    # Don't retry: ask the organization's owner to buy credits or change plan.
     raise RuntimeError(f"Urtentic billing blocked this verification ({body['code']}): {body['message']}")
 response.raise_for_status()
 verification_id = response.json()["verificationId"]
 ```
 </CodeGroup>
 
-## Phone codes when the wallet is empty
+## Phone codes when credits run out
 
 If you build your own phone-check screen instead of using the [direct link](/sdk/direct-link/getting-started), request the code with the verification it belongs to:
 
@@ -138,7 +156,7 @@ The response says whether a code was actually sent:
 { "sent": false }
 ```
 
-`sent: false` means the organization's wallet couldn't pay for the SMS, so nothing was sent. Don't ask the person for a code. Submit the phone number without an OTP and let the verification continue. It ends `NEEDS_REVIEW`.
+`sent: false` means the organization's credits couldn't pay for the SMS, so nothing was sent. Don't ask the person for a code. Submit the phone number without an OTP and let the verification continue. It ends `NEEDS_REVIEW`.
 
 | Status | `code` | Meaning |
 |---|---|---|
@@ -149,7 +167,7 @@ The response says whether a code was actually sent:
 
 ## Spotting a skipped check in results
 
-A check skipped because the wallet couldn't pay appears on the verification as a step error with `errorType` `insufficient-balance` and `severity` `MEDIUM`:
+A check skipped because the credits couldn't pay appears on the verification as a step error with `errorType` `insufficient-balance` and `severity` `MEDIUM`:
 
 - On the `phone-owner-validation` step for a phone check.
 - On the `government-check` step for a government check, and on the `watchlist` step for a watchlist screening. These steps have `status` `402` and no `data`.
@@ -161,7 +179,7 @@ A check skipped because the wallet couldn't pay appears on the verification as a
   "error": {
     "severity": "MEDIUM",
     "errorType": "insufficient-balance",
-    "message": "The government check was skipped because the wallet balance couldn't cover it"
+    "message": "The government check was skipped because the credit balance couldn't cover it"
   }
 }
 ```
