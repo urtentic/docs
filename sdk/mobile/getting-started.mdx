@@ -168,7 +168,8 @@ class _UrtenticVerificationPageState extends State<UrtenticVerificationPage> {
           if (data && (
             data.type === 'verificationComplete' ||
             data.type === 'verificationStarted' ||
-            data.type === 'verificationExited'
+            data.type === 'verificationExited' ||
+            data.type === 'verificationError'
           )) {
               if (window.UrtenticBridge) {
                   window.UrtenticBridge.postMessage(JSON.stringify(data));
@@ -197,6 +198,10 @@ class _UrtenticVerificationPageState extends State<UrtenticVerificationPage> {
         case 'verificationExited':
           Navigator.of(context).pop();
           widget.onExited();
+          break;
+        case 'verificationError':
+          // The verification couldn't start - data['details']['error'] says why,
+          // e.g. 'insufficient-balance' when your organisation has no plan or credits
           break;
       }
     } catch (e) {
@@ -269,6 +274,7 @@ The hosted page emits `postMessage` events that your bridge forwards to Flutter:
 | `verificationStarted` | The user has begun the verification flow |
 | `verificationComplete` | The user has completed all verification steps |
 | `verificationExited` | The user closed or abandoned the flow |
+| `verificationError` | The verification couldn't start. `details.error` says why: `insufficient-balance` when your organisation has no plan or credits to pay for it. The user is told the verification isn't available right now and to contact support |
 
 <Warning>
 `verificationComplete` indicates the user finished the flow in the UI — it does not mean the backend has approved the verification. Always rely on [webhook notifications](/webhooks/overview) for the authoritative result before granting access.

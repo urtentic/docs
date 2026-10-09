@@ -75,7 +75,14 @@ verificationButton.addEventListener('urtentic:userFinishedSdk', (event) => {
 verificationButton.addEventListener('urtentic:exitedSdk', (event) => {
     console.log('User exited verification', event.detail);
 });
+
+// The verification couldn't start - event.detail.error says why
+verificationButton.addEventListener('urtentic:errorSdk', (event) => {
+    console.log('Verification unavailable', event.detail.error);
+});
 ```
+
+`urtentic:errorSdk` fires when the verification can't start. `event.detail.error` is `insufficient-balance` when your organisation has no plan or credits to pay for it - [choose a plan or buy credits](/billing) to continue. The person being verified is told the verification isn't available right now and to contact support.
 
 ## Using the JavaScript API
 
@@ -99,7 +106,8 @@ For more control over the verification flow, use the JavaScript API directly. Ca
               redirect: 'https://yoursite.com/success',
               userStartedSdk: (detail) => console.log('User started verification', detail),
               userFinishedSdk: (detail) => console.log('Verification complete', detail),
-              exitedSdk: (detail) => console.log('User exited verification', detail)
+              exitedSdk: (detail) => console.log('User exited verification', detail),
+              errorSdk: (detail) => console.log('Verification unavailable', detail.error)
           });
       });
     </script>
@@ -117,6 +125,7 @@ For more control over the verification flow, use the JavaScript API directly. Ca
 | `userStartedSdk` | Function | No | Callback when user starts verification |
 | `userFinishedSdk` | Function | No | Callback when verification is complete |
 | `exitedSdk` | Function | No | Callback when user exits the flow |
+| `errorSdk` | Function | No | Callback when the verification can't start. `detail.error` says why: `insufficient-balance` when your organisation has no plan or credits |
 
 ## Customizing the Button
 
