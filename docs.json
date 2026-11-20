@@ -20,6 +20,7 @@
               "getting-started",
               "key-concepts",
               "billing",
+              "identity-lookups",
               "webhooks/workflow-management",
               "webhooks/integration"
             ]
@@ -71,6 +72,13 @@
               "GET /verifications/{verificationId}/status",
               "POST /verifications/{verificationId}/send-inputs",
               "POST /verifications/{verificationId}/validations/{processType}"
+            ]
+          },
+          {
+            "group": "Identity lookups",
+            "pages": [
+              "POST /lookups/bvn/match",
+              "POST /lookups/nin"
             ]
           },
           {

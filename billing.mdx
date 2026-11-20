@@ -1,6 +1,6 @@
 ---
 title: Billing and usage
-description: How verifications are paid for - in the free trial, on a plan, or from credits with no plan - which checks are charged per use, and what your integration sees when an organization can't pay.
+description: How verifications are paid for - in the free trial, on a plan, or from credits with no plan - which checks are charged per use, what BVN and NIN lookups cost, and what your integration sees when an organization can't pay.
 ---
 
 An Urtentic organization starts on a free trial. After that it pays for verifications with a plan, or, with no plan, from its credits as it goes. This page explains how a verification is paid for and how to handle the responses your integration gets when an organization can't pay. Plans, the price of every check and a cost calculator are on the **Billing** page of the [dashboard](https://app.urtentic.com), under **Plans & pricing**. **Overview** shows the current plan, usage and credit balance, and **History** lists payments and credit activity.
@@ -48,10 +48,58 @@ Phone verification, government database checks and watchlist screening pay a thi
 | Check | When it's charged | If the credits can't pay |
 |---|---|---|
 | Phone check | Each confirmation SMS, when it's sent: the first code and every resend, with no limit. | No SMS is sent. The verification ends `NEEDS_REVIEW`. |
-| Government check | Each lookup, once per verification. The price depends on the database (BVN, NIN, driver's licence or voter's card). | The lookup is skipped. The verification ends `NEEDS_REVIEW`. |
+| Government check | Each lookup made during a verification, once per verification. The price depends on the database (BVN, NIN, driver's licence or voter's card). Looking up a BVN or NIN directly through the API is charged on every call - see [BVN and NIN lookups](#bvn-and-nin-lookups). | The lookup is skipped. The verification ends `NEEDS_REVIEW`. |
 | Watchlist screening | Each screening, once per verification | The screening is skipped. The verification ends `NEEDS_REVIEW`. |
 
 If the SMS provider, the government database or the screening provider fails, the charge is refunded automatically.
+
+## BVN and NIN lookups
+
+You can look up a BVN or a NIN directly through the API, without starting a verification: [match details against a BVN](/identity-lookups#match-details-against-a-bvn) or [look up a NIN](/identity-lookups#look-up-a-nin). Each lookup is paid from the organization's credits.
+
+| Lookup | Price per successful response |
+|---|---|
+| BVN match | 0.03 USD |
+| NIN lookup | 0.14 USD |
+
+The price is the same on a plan and with no plan. These are the same prices as a BVN or NIN check inside a verification.
+
+### What is charged
+
+You pay for every successful response:
+
+- Every call that returns `200` is charged, including a repeat lookup of the same number.
+- A BVN match that comes back `NO_MATCH` is charged. It is a real answer.
+- 1,000 NIN lookups cost 140.00 USD. 1,000 BVN matches cost 30.00 USD.
+
+<Info>
+A repeat lookup may be answered from a stored earlier result instead of a fresh check. It is charged the same as any other successful response.
+</Info>
+
+### What is never charged
+
+| Status | `code` | Why nothing is charged |
+|---|---|---|
+| `400` | `VALIDATION_ERROR` | The request was invalid, so nothing was looked up. |
+| `402` | `CREDITS_REQUIRED` | The credits can't cover the lookup. Nothing was charged and nothing was looked up. |
+| `422` | `IDENTITY_LOOKUP_REJECTED` | The provider refused the number or the details. The charge is refunded automatically. |
+| `429` | `RATE_LIMIT_EXCEEDED` | Over 60 lookups in a minute for the organization. Nothing was done. |
+| `502` | `IDENTITY_PROVIDER_UNAVAILABLE` | The lookup service couldn't answer. The charge is refunded automatically. |
+
+The price is taken before the lookup and refunded straight away when there is no answer, so the credits are never charged for a lookup that failed. Each lookup shows in the organization's credit activity.
+
+```json 402 response
+{
+  "code": "CREDITS_REQUIRED",
+  "message": "Your credit balance can't cover this lookup (0.14 USD). Buy credits to continue.",
+  "tier": "STARTER",
+  "included": null,
+  "used": null,
+  "upgradeUrl": "/billing/checkout"
+}
+```
+
+Prices can change with the notice described above. Never retry a `402` or a `422` without changing something: buy credits for a `402`, and correct the number or details for a `422`.
 
 ## Credits
 
@@ -64,6 +112,10 @@ Credits don't expire, but they can't be withdrawn or refunded.
 ## Handling HTTP 402
 
 [Start verification](/api-reference/introduction) returns `402 Payment Required` when the organization can't start a verification. The `code` tells you why:
+
+<Note>
+BVN and NIN lookups also return `402` with `CREDITS_REQUIRED` when the credits can't cover them. See [BVN and NIN lookups](#bvn-and-nin-lookups).
+</Note>
 
 | `code` | Meaning | What the organization needs to do |
 |---|---|---|

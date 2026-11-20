@@ -40,6 +40,15 @@ API credentials can be generated from your [Urtentic Dashboard](https://app.urte
 | `POST` | `/verifications/{id}/send-inputs` | Submit verification inputs |
 | `POST` | `/verifications/{id}/validations/{processType}` | Validate inputs before submission |
 
+### Identity lookups
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/lookups/bvn/match` | Match a name, date of birth and mobile number against a BVN |
+| `POST` | `/lookups/nin` | Look up the record behind a NIN |
+
+Each successful lookup is charged to the organization's credits. See [Billing and usage](/billing#bvn-and-nin-lookups).
+
 ### Workflow
 
 | Method | Endpoint | Description |
@@ -66,7 +75,9 @@ The API uses standard HTTP status codes:
 | `402` | Payment Required - the organization's plan or credits can't pay for this. See [Billing and usage](/billing) |
 | `403` | Forbidden - insufficient permissions |
 | `404` | Not Found |
+| `422` | Unprocessable - a BVN or NIN lookup was refused by the provider. See [Identity lookups](/identity-lookups) |
 | `429` | Rate Limited |
+| `502` | Bad Gateway - the lookup service couldn't answer. A lookup that fails this way is not charged |
 
 Error responses include a JSON body. Branch on `code`, which is stable. `message` is either a readable sentence or a message key such as `verification.not.found`. For validation errors, `errors` lists a message per invalid field.
 
@@ -91,6 +102,7 @@ Limits are per client IP address. Going over a limit returns `429` with the code
 | `POST /verifications/{id}/send-inputs` | 20 requests per minute |
 | `POST /verifications/{id}/validations/{processType}` | 20 requests per minute |
 | `POST /workflows/{id}/otp` | 5 SMS codes per verification (`SMS_LIMIT_REACHED`). Email codes have no limit. |
+| `POST /lookups/bvn/match` and `POST /lookups/nin` | 60 requests per minute for the organization, shared by both endpoints. This limit is per organization, not per IP address. |
 
 <Warning>
 A webhook event is retried up to 5 times over about 10 minutes when your server responds with `5xx` or `429`, or doesn't respond within 30 seconds. Any other `4xx` drops it straight away. See [Delivery and retries](/webhooks/overview#delivery-and-retries).

@@ -1,0 +1,318 @@
+---
+title: BVN and NIN lookups
+sidebarTitle: Identity lookups
+description: Match details against a BVN or look up a NIN directly through the API, without starting a verification. Each successful response costs credits.
+---
+
+Use the lookup endpoints when you only need to check a Nigerian BVN or NIN and don't need a full verification: no workflow, no capture screens. Both endpoints use the same [API key headers](/api-reference/introduction#authentication) as the rest of the API.
+
+| Lookup | Endpoint | Price per successful response |
+|---|---|---|
+| [BVN match](#match-details-against-a-bvn) | `POST /api/v1/lookups/bvn/match` | 0.03 USD |
+| [NIN lookup](#look-up-a-nin) | `POST /api/v1/lookups/nin` | 0.14 USD |
+
+<Warning>
+Every successful response is charged to the organization's credits, including a repeat lookup of the same number. A lookup that fails is never charged. Read [BVN and NIN lookups](/billing#bvn-and-nin-lookups) on the billing page before you go live.
+</Warning>
+
+## Match details against a BVN
+
+Send the BVN and at least one detail to match it against. The response says, for each detail, whether it matches the BVN. The BVN holder's record is never returned.
+
+| Field | Required | Format |
+|---|---|---|
+| `bvn` | Yes | Exactly 11 digits |
+| `name` | One of these three | 2 to 200 characters: letters, spaces, dots, apostrophes and hyphens. Case and punctuation don't affect the match. |
+| `dateOfBirth` | One of these three | `YYYY-MM-DD`, in the past |
+| `mobileNumber` | One of these three | A Nigerian number: `08142223149`, `2348142223149` or `+2348142223149` |
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.urtentic.com/api/v1/lookups/bvn/match \
+  -H "X-CLIENT-ID: ${URTENTIC_CLIENT_ID}" \
+  -H "Authorization: Bearer ${URTENTIC_SECRET_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bvn": "22222222226",
+    "name": "OLATUNDE JOSIAH OGUNBOYEJO",
+    "dateOfBirth": "1993-04-27",
+    "mobileNumber": "08142223149"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch("https://api.urtentic.com/api/v1/lookups/bvn/match", {
+  method: "POST",
+  headers: {
+    "X-CLIENT-ID": process.env.URTENTIC_CLIENT_ID,
+    Authorization: `Bearer ${process.env.URTENTIC_SECRET_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    bvn: "22222222226",
+    name: "OLATUNDE JOSIAH OGUNBOYEJO",
+    dateOfBirth: "1993-04-27",
+    mobileNumber: "08142223149",
+  }),
+});
+
+if (!response.ok) {
+  const error = response.status === 401 ? { code: "UNAUTHORIZED" } : await response.json();
+  throw new Error(`BVN match failed with HTTP ${response.status} (${error.code})`);
+}
+const { match } = await response.json();
+console.log(match.name.status, match.dateOfBirth.status, match.mobileNumber.status);
+```
+
+```python Python
+import os
+import requests
+
+response = requests.post(
+    "https://api.urtentic.com/api/v1/lookups/bvn/match",
+    headers={
+        "X-CLIENT-ID": os.environ["URTENTIC_CLIENT_ID"],
+        "Authorization": f"Bearer {os.environ['URTENTIC_SECRET_KEY']}",
+    },
+    json={
+        "bvn": "22222222226",
+        "name": "OLATUNDE JOSIAH OGUNBOYEJO",
+        "dateOfBirth": "1993-04-27",
+        "mobileNumber": "08142223149",
+    },
+    timeout=30,
+)
+
+if not response.ok:
+    code = response.json().get("code") if response.content else "UNAUTHORIZED"
+    raise RuntimeError(f"BVN match failed with HTTP {response.status_code} ({code})")
+match = response.json()["match"]
+print(match["name"]["status"], match["dateOfBirth"]["status"], match["mobileNumber"]["status"])
+```
+
+```php PHP
+<?php
+$curl = curl_init("https://api.urtentic.com/api/v1/lookups/bvn/match");
+curl_setopt_array($curl, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_HTTPHEADER => [
+        "X-CLIENT-ID: " . getenv("URTENTIC_CLIENT_ID"),
+        "Authorization: Bearer " . getenv("URTENTIC_SECRET_KEY"),
+        "Content-Type: application/json",
+    ],
+    CURLOPT_POSTFIELDS => json_encode([
+        "bvn" => "22222222226",
+        "name" => "OLATUNDE JOSIAH OGUNBOYEJO",
+        "dateOfBirth" => "1993-04-27",
+        "mobileNumber" => "08142223149",
+    ]),
+]);
+$body = curl_exec($curl);
+$status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+curl_close($curl);
+
+if ($body === false || $status !== 200) {
+    $code = $body ? (json_decode($body, true)["code"] ?? "UNKNOWN") : "NO_RESPONSE";
+    throw new RuntimeException("BVN match failed with HTTP $status ($code)");
+}
+$match = json_decode($body, true)["match"];
+echo $match["name"]["status"], " ", $match["dateOfBirth"]["status"], " ", $match["mobileNumber"]["status"];
+```
+
+```java Java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+
+String body = """
+    {"bvn":"22222222226","name":"OLATUNDE JOSIAH OGUNBOYEJO","dateOfBirth":"1993-04-27","mobileNumber":"08142223149"}
+    """;
+HttpRequest request = HttpRequest.newBuilder(URI.create("https://api.urtentic.com/api/v1/lookups/bvn/match"))
+    .timeout(Duration.ofSeconds(30))
+    .header("X-CLIENT-ID", System.getenv("URTENTIC_CLIENT_ID"))
+    .header("Authorization", "Bearer " + System.getenv("URTENTIC_SECRET_KEY"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(body))
+    .build();
+
+HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+if (response.statusCode() != 200) {
+    throw new IllegalStateException("BVN match failed with HTTP " + response.statusCode() + ": " + response.body());
+}
+System.out.println(response.body());
+```
+</CodeGroup>
+
+```json 200 response
+{
+  "bvn": "***2226",
+  "match": {
+    "name": { "status": "FULL_MATCH", "score": 100 },
+    "dateOfBirth": { "status": "NO_MATCH" },
+    "mobileNumber": { "status": "FULL_MATCH" }
+  }
+}
+```
+
+The BVN comes back masked. Each detail has a `status`:
+
+| `status` | Meaning |
+|---|---|
+| `FULL_MATCH` | The detail matches the BVN |
+| `PARTIAL_MATCH` | The detail is close but not exact |
+| `NO_MATCH` | The detail doesn't match |
+| `NOT_PROVIDED` | You didn't send this detail, so nothing was compared |
+
+The name also has a `score` from 0 to 100, or `null` when you didn't send a name. Decide for yourself what counts as a pass: for example, require `FULL_MATCH` on the date of birth and accept `FULL_MATCH` or `PARTIAL_MATCH` on the name.
+
+<Note>
+A `NO_MATCH` is a successful response, so it is charged. A request the provider refuses (`422`) is not.
+</Note>
+
+## Look up a NIN
+
+Send the 11-digit NIN. The response is the record on file.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.urtentic.com/api/v1/lookups/nin \
+  -H "X-CLIENT-ID: ${URTENTIC_CLIENT_ID}" \
+  -H "Authorization: Bearer ${URTENTIC_SECRET_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"nin": "94646622685"}'
+```
+
+```javascript JavaScript
+const response = await fetch("https://api.urtentic.com/api/v1/lookups/nin", {
+  method: "POST",
+  headers: {
+    "X-CLIENT-ID": process.env.URTENTIC_CLIENT_ID,
+    Authorization: `Bearer ${process.env.URTENTIC_SECRET_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ nin: "94646622685" }),
+});
+
+if (!response.ok) {
+  const error = response.status === 401 ? { code: "UNAUTHORIZED" } : await response.json();
+  throw new Error(`NIN lookup failed with HTTP ${response.status} (${error.code})`);
+}
+const record = await response.json();
+console.log(record.firstName, record.lastName, record.dateOfBirth);
+```
+
+```python Python
+import os
+import requests
+
+response = requests.post(
+    "https://api.urtentic.com/api/v1/lookups/nin",
+    headers={
+        "X-CLIENT-ID": os.environ["URTENTIC_CLIENT_ID"],
+        "Authorization": f"Bearer {os.environ['URTENTIC_SECRET_KEY']}",
+    },
+    json={"nin": "94646622685"},
+    timeout=30,
+)
+
+if not response.ok:
+    code = response.json().get("code") if response.content else "UNAUTHORIZED"
+    raise RuntimeError(f"NIN lookup failed with HTTP {response.status_code} ({code})")
+record = response.json()
+print(record["firstName"], record["lastName"], record["dateOfBirth"])
+```
+
+```php PHP
+<?php
+$curl = curl_init("https://api.urtentic.com/api/v1/lookups/nin");
+curl_setopt_array($curl, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_HTTPHEADER => [
+        "X-CLIENT-ID: " . getenv("URTENTIC_CLIENT_ID"),
+        "Authorization: Bearer " . getenv("URTENTIC_SECRET_KEY"),
+        "Content-Type: application/json",
+    ],
+    CURLOPT_POSTFIELDS => json_encode(["nin" => "94646622685"]),
+]);
+$body = curl_exec($curl);
+$status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+curl_close($curl);
+
+if ($body === false || $status !== 200) {
+    $code = $body ? (json_decode($body, true)["code"] ?? "UNKNOWN") : "NO_RESPONSE";
+    throw new RuntimeException("NIN lookup failed with HTTP $status ($code)");
+}
+$record = json_decode($body, true);
+echo $record["firstName"], " ", $record["lastName"], " ", $record["dateOfBirth"];
+```
+
+```java Java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+
+HttpRequest request = HttpRequest.newBuilder(URI.create("https://api.urtentic.com/api/v1/lookups/nin"))
+    .timeout(Duration.ofSeconds(30))
+    .header("X-CLIENT-ID", System.getenv("URTENTIC_CLIENT_ID"))
+    .header("Authorization", "Bearer " + System.getenv("URTENTIC_SECRET_KEY"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString("{\"nin\":\"94646622685\"}"))
+    .build();
+
+HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+if (response.statusCode() != 200) {
+    throw new IllegalStateException("NIN lookup failed with HTTP " + response.statusCode() + ": " + response.body());
+}
+System.out.println(response.body());
+```
+</CodeGroup>
+
+```json 200 response
+{
+  "nin": "***2685",
+  "firstName": "BENJAMIN",
+  "middleName": "CHUKS",
+  "lastName": "WILES",
+  "dateOfBirth": "1996-10-08",
+  "gender": "OTHER",
+  "mobileNumber": "+2348107248890"
+}
+```
+
+The NIN comes back masked. `middleName`, `dateOfBirth` and `mobileNumber` are `null` when the record doesn't have them, `gender` is `UNKNOWN` when it doesn't say, and `mobileNumber` is in international format.
+
+## Errors and what is charged
+
+| Status | `code` | What to do | Charged? |
+|---|---|---|---|
+| `400` | `VALIDATION_ERROR` | Fix the fields listed in `errors` | No |
+| `401` | none (no body) | Check the API key and client ID | No |
+| `402` | `CREDITS_REQUIRED` | Buy credits, then retry | No |
+| `422` | `IDENTITY_LOOKUP_REJECTED` | The number or details were refused. Correct them: retrying the same request gives the same answer | No - refunded |
+| `429` | `RATE_LIMIT_EXCEEDED` | Wait, then retry. The limit is 60 lookups a minute for the organization. | No |
+| `502` | `IDENTITY_PROVIDER_UNAVAILABLE` | Retry after a short wait | No - refunded |
+
+Only a `200` is charged. See [Billing and usage](/billing#bvn-and-nin-lookups) for the prices, refunds and what shows in your credit activity.
+
+<Warning>
+BVNs and NINs are personal data. Don't log them or the lookup results in plain text, and don't retry a `422` in a loop: each attempt counts towards your rate limit.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Billing and usage" icon="receipt" href="/billing#bvn-and-nin-lookups">
+    Prices, refunds and handling a `402`.
+  </Card>
+  <Card title="API reference" icon="code" href="/api-reference/introduction">
+    All endpoints, parameters and responses.
+  </Card>
+</CardGroup>

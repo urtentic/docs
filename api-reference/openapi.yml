@@ -526,6 +526,138 @@ components:
         countryFlag: "🇳🇬"
         region: Africa
         documentTypes: []
+    MatchStatus:
+      type: string
+      enum: [FULL_MATCH, PARTIAL_MATCH, NO_MATCH, NOT_PROVIDED]
+      description: |
+        How one detail you sent compares with what is on record for the BVN.
+        `NOT_PROVIDED` means you didn't send that detail, so nothing was compared.
+    BvnMatchRequest:
+      type: object
+      required: [bvn]
+      description: The BVN and at least one detail to match it against.
+      properties:
+        bvn:
+          type: string
+          pattern: '^\d{11}$'
+          description: The 11-digit Bank Verification Number.
+          example: '22222222226'
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+          description: |
+            The person's full name. Letters, spaces, dots, apostrophes and hyphens only. Case and punctuation
+            don't affect the match.
+          example: OLATUNDE JOSIAH OGUNBOYEJO
+        dateOfBirth:
+          type: string
+          format: date
+          description: Date of birth as `YYYY-MM-DD`. Must be in the past.
+          example: '1993-04-27'
+        mobileNumber:
+          type: string
+          pattern: '^(\+?234|0)\d{10}$'
+          description: A Nigerian mobile number, as `08142223149`, `2348142223149` or `+2348142223149`.
+          example: '08142223149'
+    BvnMatchResponse:
+      type: object
+      properties:
+        bvn:
+          type: string
+          description: The BVN with all but the last four digits masked.
+          example: '***2226'
+        match:
+          type: object
+          properties:
+            name:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/MatchStatus'
+                score:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  nullable: true
+                  description: How close the name is, from 0 to 100. `null` when you didn't send a name.
+            dateOfBirth:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/MatchStatus'
+            mobileNumber:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/MatchStatus'
+    NinLookupRequest:
+      type: object
+      required: [nin]
+      properties:
+        nin:
+          type: string
+          pattern: '^\d{11}$'
+          description: The 11-digit National Identification Number.
+          example: '94646622685'
+    NinLookupResponse:
+      type: object
+      properties:
+        nin:
+          type: string
+          description: The NIN with all but the last four digits masked.
+          example: '***2685'
+        firstName:
+          type: string
+          example: BENJAMIN
+        middleName:
+          type: string
+          nullable: true
+          example: CHUKS
+        lastName:
+          type: string
+          example: WILES
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+          example: '1996-10-08'
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER, UNKNOWN]
+          example: OTHER
+        mobileNumber:
+          type: string
+          nullable: true
+          description: The phone number on record, in international format.
+          example: '+2348107248890'
+    LookupCreditsRequired:
+      type: object
+      description: |
+        Returned with `402` when the organization's credits can't pay for the lookup. Nothing was charged
+        and no lookup was made. See [Billing and usage](/billing#bvn-and-nin-lookups).
+      properties:
+        code:
+          type: string
+          example: CREDITS_REQUIRED
+        message:
+          type: string
+          example: Your credit balance can't cover this lookup (0.14 USD). Buy credits to continue.
+        tier:
+          type: string
+          description: The organization's plan tier
+          example: STARTER
+        included:
+          type: integer
+          nullable: true
+          description: Always `null` for lookups.
+        used:
+          type: integer
+          nullable: true
+          description: Always `null` for lookups.
+        upgradeUrl:
+          type: string
+          example: /billing/checkout
 paths:
   /workflows/supported-document-types:
     get:
@@ -1315,6 +1447,245 @@ paths:
                     code: VERIFICATION_NOT_FOUND
                     message: verification.not.found
       operationId: get-verification-status
+  /lookups/bvn/match:
+    post:
+      tags:
+        - Identity lookups
+      security:
+        - bearerAuth: []
+          clientIdAuth: []
+      summary: Match details against a BVN
+      description: |
+        Checks a name, date of birth and mobile number against the Bank Verification Number you send, and
+        tells you for each one whether it matches. The BVN holder's record is never returned - only whether
+        what you sent matches it.
+
+        ### Billing
+        Every successful response is charged **0.03 USD** to the organization's credits, the same on a plan
+        and with no plan. A `NO_MATCH` is a successful response and is charged: it is a real answer. Repeating
+        a lookup is charged again.
+
+        A request that gets no answer is never charged: validation errors (`400`), insufficient credits (`402`),
+        a refused BVN (`422`) and an unavailable lookup service (`502`) cost nothing. See
+        [Billing and usage](/billing#bvn-and-nin-lookups).
+
+        ### Notes
+        - Send the BVN and at least one of `name`, `dateOfBirth` or `mobileNumber`.
+        - A detail you leave out comes back as `NOT_PROVIDED`.
+        - A repeat lookup may be answered from a stored earlier result instead of a fresh check. It is charged the same.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BvnMatchRequest'
+            examples:
+              request:
+                value:
+                  bvn: '22222222226'
+                  name: OLATUNDE JOSIAH OGUNBOYEJO
+                  dateOfBirth: '1993-04-27'
+                  mobileNumber: '08142223149'
+      responses:
+        '200':
+          description: The lookup was answered. `0.03 USD` was charged to the organization's credits.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BvnResponse'
+              examples:
+                full_match:
+                  summary: All three details sent
+                  value:
+                    bvn: '***2226'
+                    match:
+                      name:
+                        status: FULL_MATCH
+                        score: 100
+                      dateOfBirth:
+                        status: NO_MATCH
+                      mobileNumber:
+                        status: FULL_MATCH
+                mobile_only:
+                  summary: Only the mobile number sent
+                  value:
+                    bvn: '***2226'
+                    match:
+                      name:
+                        status: NOT_PROVIDED
+                        score: null
+                      dateOfBirth:
+                        status: NOT_PROVIDED
+                      mobileNumber:
+                        status: FULL_MATCH
+        '400':
+          description: A field is missing or invalid. Nothing was charged. `errors` lists a message per invalid field.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                validation_error:
+                  value:
+                    code: VALIDATION_ERROR
+                    message: validation.error
+                    errors:
+                      - send at least one of name, dateOfBirth or mobileNumber to match the BVN against
+        '401':
+          description: Missing or invalid API key. No body.
+        '402':
+          description: |
+            The organization's credits can't cover the lookup. Nothing was charged and nothing was looked up.
+            Buy credits, then retry. See [Billing and usage](/billing#bvn-and-nin-lookups).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookupCreditsRequired'
+        '422':
+          description: |
+            The provider refused the number or the details sent with it. This is an answer about the input, not an
+            outage: don't retry the same request. The charge is refunded automatically.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rejected:
+                  value:
+                    code: IDENTITY_LOOKUP_REJECTED
+                    message: The BVN could not be verified. Check it and try again.
+                    errors: []
+        '429':
+          description: |
+            The organization went over 60 lookups in a minute (`RATE_LIMIT_EXCEEDED`). Wait and retry. The limit is
+            per organization, shared by both lookup endpoints.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            The lookup service couldn't be reached or gave no usable answer. The charge is refunded automatically;
+            retry shortly.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                unavailable:
+                  value:
+                    code: IDENTITY_PROVIDER_UNAVAILABLE
+                    message: The lookup service is temporarily unavailable. You have not been charged; try again shortly.
+                    errors: []
+  /lookups/nin:
+    post:
+      tags:
+        - Identity lookups
+      security:
+        - bearerAuth: []
+          clientIdAuth: []
+      summary: Look up a NIN
+      description: |
+        Returns the name, date of birth, gender and phone number on record for a National Identification Number.
+
+        ### Billing
+        Every successful response is charged **0.14 USD** to the organization's credits, the same on a plan
+        and with no plan. Repeating a lookup is charged again.
+
+        A request that gets no answer is never charged: validation errors (`400`), insufficient credits (`402`),
+        a refused NIN (`422`) and an unavailable lookup service (`502`) cost nothing. See
+        [Billing and usage](/billing#bvn-and-nin-lookups).
+
+        ### Notes
+        - `middleName`, `dateOfBirth` and `mobileNumber` are `null` when the record doesn't have them.
+        - `gender` is `UNKNOWN` when the record doesn't say.
+        - A repeat lookup may be answered from a stored earlier result instead of a fresh check. It is charged the same.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NinLookupRequest'
+            examples:
+              request:
+                value:
+                  nin: '94646622685'
+      responses:
+        '200':
+          description: The lookup was answered. `0.14 USD` was charged to the organization's credits.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NinResponse'
+              examples:
+                record:
+                  value:
+                    nin: '***2685'
+                    firstName: BENJAMIN
+                    middleName: CHUKS
+                    lastName: WILES
+                    dateOfBirth: '1996-10-08'
+                    gender: OTHER
+                    mobileNumber: '+2348107248890'
+        '400':
+          description: A field is missing or invalid. Nothing was charged. `errors` lists a message per invalid field.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                validation_error:
+                  value:
+                    code: VALIDATION_ERROR
+                    message: validation.error
+                    errors:
+                      - nin must be exactly 11 digits
+        '401':
+          description: Missing or invalid API key. No body.
+        '402':
+          description: |
+            The organization's credits can't cover the lookup. Nothing was charged and nothing was looked up.
+            Buy credits, then retry. See [Billing and usage](/billing#bvn-and-nin-lookups).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookupCreditsRequired'
+        '422':
+          description: |
+            The provider refused the number or the details sent with it. This is an answer about the input, not an
+            outage: don't retry the same request. The charge is refunded automatically.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rejected:
+                  value:
+                    code: IDENTITY_LOOKUP_REJECTED
+                    message: The NIN could not be verified. Check it and try again.
+                    errors: []
+        '429':
+          description: |
+            The organization went over 60 lookups in a minute (`RATE_LIMIT_EXCEEDED`). Wait and retry. The limit is
+            per organization, shared by both lookup endpoints.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: |
+            The lookup service couldn't be reached or gave no usable answer. The charge is refunded automatically;
+            retry shortly.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                unavailable:
+                  value:
+                    code: IDENTITY_PROVIDER_UNAVAILABLE
+                    message: The lookup service is temporarily unavailable. You have not been charged; try again shortly.
+                    errors: []
 tags:
   - name: Identity
     description: |
@@ -1325,6 +1696,14 @@ tags:
       - Check identity verification status
       - Update identity information
       - Link identities across verification sessions
+  - name: Identity lookups
+    description: |
+      Look up a BVN or a NIN directly, without starting a verification.
+
+      - **BVN match**: check a name, date of birth and mobile number against a BVN.
+      - **NIN lookup**: get the record behind a NIN.
+
+      Each successful response is charged to the organization's credits. See [Billing and usage](/billing#bvn-and-nin-lookups).
   - name: Processes
     description: |
       Configuration and management of individual verification process types that can be used in workflows.
