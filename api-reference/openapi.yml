@@ -528,14 +528,12 @@ components:
         documentTypes: []
     MatchStatus:
       type: string
-      enum: [FULL_MATCH, PARTIAL_MATCH, NO_MATCH, NOT_PROVIDED]
-      description: |
-        How one detail you sent compares with what is on record for the BVN.
-        `NOT_PROVIDED` means you didn't send that detail, so nothing was compared.
+      enum: [FULL_MATCH, PARTIAL_MATCH, NO_MATCH]
+      description: How one detail you sent compares with what is on record for the BVN.
     BvnMatchRequest:
       type: object
-      required: [bvn]
-      description: The BVN and at least one detail to match it against.
+      required: [bvn, name, dateOfBirth, mobileNumber]
+      description: The BVN and the three details to match it against. All four fields are required.
       properties:
         bvn:
           type: string
@@ -580,7 +578,7 @@ components:
                   minimum: 0
                   maximum: 100
                   nullable: true
-                  description: How close the name is, from 0 to 100. `null` when you didn't send a name.
+                  description: How close the name is, from 0 to 100. `null` when no score is available.
             dateOfBirth:
               type: object
               properties:
@@ -1470,8 +1468,8 @@ paths:
         [Billing and usage](/billing#bvn-and-nin-lookups).
 
         ### Notes
-        - Send the BVN and at least one of `name`, `dateOfBirth` or `mobileNumber`.
-        - A detail you leave out comes back as `NOT_PROVIDED`.
+        - Send the BVN, `name`, `dateOfBirth` and `mobileNumber`. All four are required; a request missing one is refused
+          with `400` and costs nothing.
         - A repeat lookup may be answered from a stored earlier result instead of a fresh check. It is charged the same.
       requestBody:
         required: true
@@ -1495,7 +1493,6 @@ paths:
                 $ref: '#/components/schemas/BvnResponse'
               examples:
                 full_match:
-                  summary: All three details sent
                   value:
                     bvn: '***2226'
                     match:
@@ -1504,18 +1501,6 @@ paths:
                         score: 100
                       dateOfBirth:
                         status: NO_MATCH
-                      mobileNumber:
-                        status: FULL_MATCH
-                mobile_only:
-                  summary: Only the mobile number sent
-                  value:
-                    bvn: '***2226'
-                    match:
-                      name:
-                        status: NOT_PROVIDED
-                        score: null
-                      dateOfBirth:
-                        status: NOT_PROVIDED
                       mobileNumber:
                         status: FULL_MATCH
         '400':
@@ -1530,7 +1515,7 @@ paths:
                     code: VALIDATION_ERROR
                     message: validation.error
                     errors:
-                      - send at least one of name, dateOfBirth or mobileNumber to match the BVN against
+                      - name is required
         '401':
           description: Missing or invalid API key. No body.
         '402':

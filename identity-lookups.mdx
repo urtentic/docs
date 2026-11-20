@@ -17,14 +17,14 @@ Every successful response is charged to the organization's credits, including a 
 
 ## Match details against a BVN
 
-Send the BVN and at least one detail to match it against. The response says, for each detail, whether it matches the BVN. The BVN holder's record is never returned.
+Send the BVN together with a name, date of birth and mobile number. The response says, for each of the three, whether it matches the BVN. The BVN holder's record is never returned. All four fields are required.
 
 | Field | Required | Format |
 |---|---|---|
 | `bvn` | Yes | Exactly 11 digits |
-| `name` | One of these three | 2 to 200 characters: letters, spaces, dots, apostrophes and hyphens. Case and punctuation don't affect the match. |
-| `dateOfBirth` | One of these three | `YYYY-MM-DD`, in the past |
-| `mobileNumber` | One of these three | A Nigerian number: `08142223149`, `2348142223149` or `+2348142223149` |
+| `name` | Yes | 2 to 200 characters: letters, spaces, dots, apostrophes and hyphens. Case and punctuation don't affect the match. |
+| `dateOfBirth` | Yes | `YYYY-MM-DD`, in the past |
+| `mobileNumber` | Yes | A Nigerian number: `08142223149`, `2348142223149` or `+2348142223149` |
 
 <CodeGroup>
 ```bash cURL
@@ -165,9 +165,8 @@ The BVN comes back masked. Each detail has a `status`:
 | `FULL_MATCH` | The detail matches the BVN |
 | `PARTIAL_MATCH` | The detail is close but not exact |
 | `NO_MATCH` | The detail doesn't match |
-| `NOT_PROVIDED` | You didn't send this detail, so nothing was compared |
 
-The name also has a `score` from 0 to 100, or `null` when you didn't send a name. Decide for yourself what counts as a pass: for example, require `FULL_MATCH` on the date of birth and accept `FULL_MATCH` or `PARTIAL_MATCH` on the name.
+The name also has a `score` from 0 to 100, or `null` when no score is available. Decide for yourself what counts as a pass: for example, require `FULL_MATCH` on the date of birth and accept `FULL_MATCH` or `PARTIAL_MATCH` on the name.
 
 <Note>
 A `NO_MATCH` is a successful response, so it is charged. A request the provider refuses (`422`) is not.
