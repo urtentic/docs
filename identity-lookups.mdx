@@ -12,7 +12,7 @@ Use the lookup endpoints when you only need to check a Nigerian BVN or NIN and d
 | [NIN lookup](#look-up-a-nin) | `POST /api/v1/lookups/nin` | 0.14 USD |
 
 <Warning>
-Every successful response is charged to the organization's credits, including a repeat lookup of the same number. A lookup that fails is never charged. Read [BVN and NIN lookups](/billing#bvn-and-nin-lookups) on the billing page before you go live.
+Every successful response is charged to the organization's credits. A lookup that fails is never charged. Read [BVN and NIN lookups](/billing#bvn-and-nin-lookups) on the billing page before you go live.
 </Warning>
 
 ## Match details against a BVN
@@ -169,7 +169,7 @@ The BVN comes back masked. Each detail has a `status`:
 The name also has a `score` from 0 to 100, or `null` when no score is available. Decide for yourself what counts as a pass: for example, require `FULL_MATCH` on the date of birth and accept `FULL_MATCH` or `PARTIAL_MATCH` on the name.
 
 <Note>
-A `NO_MATCH` is a successful response, so it is charged. A request the provider refuses (`422`) is not.
+A `NO_MATCH` is a successful response, so it is charged. A request that is refused (`422`) is not.
 </Note>
 
 ## Look up a NIN
@@ -297,7 +297,7 @@ The NIN comes back masked. `middleName`, `dateOfBirth` and `mobileNumber` are `n
 | `402` | `CREDITS_REQUIRED` | Buy credits, then retry | No |
 | `422` | `IDENTITY_LOOKUP_REJECTED` | The number or details were refused. Correct them: retrying the same request gives the same answer | No - refunded |
 | `429` | `RATE_LIMIT_EXCEEDED` | Wait, then retry. The limit is 60 lookups a minute for the organization. | No |
-| `502` | `IDENTITY_PROVIDER_UNAVAILABLE` | Retry after a short wait | No - refunded |
+| `502` | `IDENTITY_LOOKUP_UNAVAILABLE` | Retry after a short wait | No - refunded |
 
 Only a `200` is charged. See [Billing and usage](/billing#bvn-and-nin-lookups) for the prices, refunds and what shows in your credit activity.
 

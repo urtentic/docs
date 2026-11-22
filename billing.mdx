@@ -43,7 +43,7 @@ A verification is charged at the prices in effect when it starts. Prices can cha
 
 ## Checks charged per use
 
-Phone verification, government database checks and watchlist screening pay a third party every time they run, so they are never covered by a plan. Each use is paid from credits - on a plan, in the free trial, and with no plan - so they need credits: a verification whose workflow uses them is refused while the organization has none.
+Phone verification, government database checks and watchlist screening cost us every time they run, so they are never covered by a plan. Each use is paid from credits - on a plan, in the free trial, and with no plan - so they need credits: a verification whose workflow uses them is refused while the organization has none.
 
 | Check | When it's charged | If the credits can't pay |
 |---|---|---|
@@ -51,7 +51,7 @@ Phone verification, government database checks and watchlist screening pay a thi
 | Government check | Each lookup made during a verification, once per verification. The price depends on the database (BVN, NIN, driver's licence or voter's card). Looking up a BVN or NIN directly through the API is charged on every call - see [BVN and NIN lookups](#bvn-and-nin-lookups). | The lookup is skipped. The verification ends `NEEDS_REVIEW`. |
 | Watchlist screening | Each screening, once per verification | The screening is skipped. The verification ends `NEEDS_REVIEW`. |
 
-If the SMS provider, the government database or the screening provider fails, the charge is refunded automatically.
+If one of these checks can't be completed, the charge is refunded automatically.
 
 ## BVN and NIN lookups
 
@@ -68,13 +68,9 @@ The price is the same on a plan and with no plan. These are the same prices as a
 
 You pay for every successful response:
 
-- Every call that returns `200` is charged, including a repeat lookup of the same number.
+- Every call that returns `200` is charged.
 - A BVN match that comes back `NO_MATCH` is charged. It is a real answer.
 - 1,000 NIN lookups cost 140.00 USD. 1,000 BVN matches cost 30.00 USD.
-
-<Info>
-A repeat lookup may be answered from a stored earlier result instead of a fresh check. It is charged the same as any other successful response.
-</Info>
 
 ### What is never charged
 
@@ -82,9 +78,9 @@ A repeat lookup may be answered from a stored earlier result instead of a fresh 
 |---|---|---|
 | `400` | `VALIDATION_ERROR` | The request was invalid, so nothing was looked up. |
 | `402` | `CREDITS_REQUIRED` | The credits can't cover the lookup. Nothing was charged and nothing was looked up. |
-| `422` | `IDENTITY_LOOKUP_REJECTED` | The provider refused the number or the details. The charge is refunded automatically. |
+| `422` | `IDENTITY_LOOKUP_REJECTED` | The number or the details were refused. The charge is refunded automatically. |
 | `429` | `RATE_LIMIT_EXCEEDED` | Over 60 lookups in a minute for the organization. Nothing was done. |
-| `502` | `IDENTITY_PROVIDER_UNAVAILABLE` | The lookup service couldn't answer. The charge is refunded automatically. |
+| `502` | `IDENTITY_LOOKUP_UNAVAILABLE` | The lookup service couldn't answer. The charge is refunded automatically. |
 
 The price is taken before the lookup and refunded straight away when there is no answer, so the credits are never charged for a lookup that failed. Each lookup shows in the organization's credit activity.
 

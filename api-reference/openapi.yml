@@ -1460,8 +1460,7 @@ paths:
 
         ### Billing
         Every successful response is charged **0.03 USD** to the organization's credits, the same on a plan
-        and with no plan. A `NO_MATCH` is a successful response and is charged: it is a real answer. Repeating
-        a lookup is charged again.
+        and with no plan. A `NO_MATCH` is a successful response and is charged: it is a real answer.
 
         A request that gets no answer is never charged: validation errors (`400`), insufficient credits (`402`),
         a refused BVN (`422`) and an unavailable lookup service (`502`) cost nothing. See
@@ -1470,7 +1469,6 @@ paths:
         ### Notes
         - Send the BVN, `name`, `dateOfBirth` and `mobileNumber`. All four are required; a request missing one is refused
           with `400` and costs nothing.
-        - A repeat lookup may be answered from a stored earlier result instead of a fresh check. It is charged the same.
       requestBody:
         required: true
         content:
@@ -1528,7 +1526,7 @@ paths:
                 $ref: '#/components/schemas/LookupCreditsRequired'
         '422':
           description: |
-            The provider refused the number or the details sent with it. This is an answer about the input, not an
+            The number or the details sent with it were refused. This is an answer about the input, not an
             outage: don't retry the same request. The charge is refunded automatically.
           content:
             application/json:
@@ -1559,7 +1557,7 @@ paths:
               examples:
                 unavailable:
                   value:
-                    code: IDENTITY_PROVIDER_UNAVAILABLE
+                    code: IDENTITY_LOOKUP_UNAVAILABLE
                     message: The lookup service is temporarily unavailable. You have not been charged; try again shortly.
                     errors: []
   /lookups/nin:
@@ -1575,7 +1573,7 @@ paths:
 
         ### Billing
         Every successful response is charged **0.14 USD** to the organization's credits, the same on a plan
-        and with no plan. Repeating a lookup is charged again.
+        and with no plan.
 
         A request that gets no answer is never charged: validation errors (`400`), insufficient credits (`402`),
         a refused NIN (`422`) and an unavailable lookup service (`502`) cost nothing. See
@@ -1584,7 +1582,6 @@ paths:
         ### Notes
         - `middleName`, `dateOfBirth` and `mobileNumber` are `null` when the record doesn't have them.
         - `gender` is `UNKNOWN` when the record doesn't say.
-        - A repeat lookup may be answered from a stored earlier result instead of a fresh check. It is charged the same.
       requestBody:
         required: true
         content:
@@ -1637,7 +1634,7 @@ paths:
                 $ref: '#/components/schemas/LookupCreditsRequired'
         '422':
           description: |
-            The provider refused the number or the details sent with it. This is an answer about the input, not an
+            The number or the details sent with it were refused. This is an answer about the input, not an
             outage: don't retry the same request. The charge is refunded automatically.
           content:
             application/json:
@@ -1668,7 +1665,7 @@ paths:
               examples:
                 unavailable:
                   value:
-                    code: IDENTITY_PROVIDER_UNAVAILABLE
+                    code: IDENTITY_LOOKUP_UNAVAILABLE
                     message: The lookup service is temporarily unavailable. You have not been charged; try again shortly.
                     errors: []
 tags:
