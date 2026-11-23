@@ -640,7 +640,7 @@ components:
           example: CREDITS_REQUIRED
         message:
           type: string
-          example: Your credit balance can't cover this lookup (0.14 USD). Buy credits to continue.
+          example: Your credit balance can't cover this lookup. Buy credits to continue.
         tier:
           type: string
           description: The organization's plan tier
@@ -1459,8 +1459,8 @@ paths:
         what you sent matches it.
 
         ### Billing
-        Every successful response is charged **0.03 USD** to the organization's credits, the same on a plan
-        and with no plan. A `NO_MATCH` is a successful response and is charged: it is a real answer.
+        Every successful response is charged to the organization's credits, the same on a plan
+        and with no plan. The price is on the Billing page of the dashboard. A `NO_MATCH` is a successful response and is charged: it is a real answer.
 
         A request that gets no answer is never charged: validation errors (`400`), insufficient credits (`402`),
         a refused BVN (`422`) and an unavailable lookup service (`502`) cost nothing. See
@@ -1484,7 +1484,7 @@ paths:
                   mobileNumber: '08142223149'
       responses:
         '200':
-          description: The lookup was answered. `0.03 USD` was charged to the organization's credits.
+          description: The lookup was answered. The organization's credits were charged.
           content:
             application/json:
               schema:
@@ -1572,8 +1572,8 @@ paths:
         Returns the name, date of birth, gender and phone number on record for a National Identification Number.
 
         ### Billing
-        Every successful response is charged **0.14 USD** to the organization's credits, the same on a plan
-        and with no plan.
+        Every successful response is charged to the organization's credits, the same on a plan
+        and with no plan. The price is on the Billing page of the dashboard.
 
         A request that gets no answer is never charged: validation errors (`400`), insufficient credits (`402`),
         a refused NIN (`422`) and an unavailable lookup service (`502`) cost nothing. See
@@ -1594,7 +1594,7 @@ paths:
                   nin: '94646622685'
       responses:
         '200':
-          description: The lookup was answered. `0.14 USD` was charged to the organization's credits.
+          description: The lookup was answered. The organization's credits were charged.
           content:
             application/json:
               schema:

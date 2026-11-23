@@ -57,12 +57,7 @@ If one of these checks can't be completed, the charge is refunded automatically.
 
 You can look up a BVN or a NIN directly through the API, without starting a verification: [match details against a BVN](/identity-lookups#match-details-against-a-bvn) or [look up a NIN](/identity-lookups#look-up-a-nin). Each lookup is paid from the organization's credits.
 
-| Lookup | Price per successful response |
-|---|---|
-| BVN match | 0.03 USD |
-| NIN lookup | 0.14 USD |
-
-The price is the same on a plan and with no plan. These are the same prices as a BVN or NIN check inside a verification.
+The price of each lookup is on **Billing** > **Plans & pricing** in the [dashboard](https://app.urtentic.com). It is the same on a plan and with no plan, and the same as a BVN or NIN check inside a verification.
 
 ### What is charged
 
@@ -70,7 +65,6 @@ You pay for every successful response:
 
 - Every call that returns `200` is charged.
 - A BVN match that comes back `NO_MATCH` is charged. It is a real answer.
-- 1,000 NIN lookups cost 140.00 USD. 1,000 BVN matches cost 30.00 USD.
 
 ### What is never charged
 
@@ -87,7 +81,7 @@ The price is taken before the lookup and refunded straight away when there is no
 ```json 402 response
 {
   "code": "CREDITS_REQUIRED",
-  "message": "Your credit balance can't cover this lookup (0.14 USD). Buy credits to continue.",
+  "message": "Your credit balance can't cover this lookup. Buy credits to continue.",
   "tier": "STARTER",
   "included": null,
   "used": null,

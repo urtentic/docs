@@ -6,10 +6,10 @@ description: Match details against a BVN or look up a NIN directly through the A
 
 Use the lookup endpoints when you only need to check a Nigerian BVN or NIN and don't need a full verification: no workflow, no capture screens. Both endpoints use the same [API key headers](/api-reference/introduction#authentication) as the rest of the API.
 
-| Lookup | Endpoint | Price per successful response |
-|---|---|---|
-| [BVN match](#match-details-against-a-bvn) | `POST /api/v1/lookups/bvn/match` | 0.03 USD |
-| [NIN lookup](#look-up-a-nin) | `POST /api/v1/lookups/nin` | 0.14 USD |
+| Lookup | Endpoint |
+|---|---|
+| [BVN match](#match-details-against-a-bvn) | `POST /api/v1/lookups/bvn/match` |
+| [NIN lookup](#look-up-a-nin) | `POST /api/v1/lookups/nin` |
 
 <Warning>
 Every successful response is charged to the organization's credits. A lookup that fails is never charged. Read [BVN and NIN lookups](/billing#bvn-and-nin-lookups) on the billing page before you go live.
@@ -299,7 +299,7 @@ The NIN comes back masked. `middleName`, `dateOfBirth` and `mobileNumber` are `n
 | `429` | `RATE_LIMIT_EXCEEDED` | Wait, then retry. The limit is 60 lookups a minute for the organization. | No |
 | `502` | `IDENTITY_LOOKUP_UNAVAILABLE` | Retry after a short wait | No - refunded |
 
-Only a `200` is charged. See [Billing and usage](/billing#bvn-and-nin-lookups) for the prices, refunds and what shows in your credit activity.
+Only a `200` is charged. See [Billing and usage](/billing#bvn-and-nin-lookups) for refunds and what shows in your credit activity.
 
 <Warning>
 BVNs and NINs are personal data. Don't log them or the lookup results in plain text, and don't retry a `422` in a loop: each attempt counts towards your rate limit.
@@ -309,7 +309,7 @@ BVNs and NINs are personal data. Don't log them or the lookup results in plain t
 
 <CardGroup cols={2}>
   <Card title="Billing and usage" icon="receipt" href="/billing#bvn-and-nin-lookups">
-    Prices, refunds and handling a `402`.
+    Charges, refunds and handling a `402`.
   </Card>
   <Card title="API reference" icon="code" href="/api-reference/introduction">
     All endpoints, parameters and responses.
