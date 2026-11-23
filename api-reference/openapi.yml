@@ -1536,7 +1536,7 @@ paths:
                 rejected:
                   value:
                     code: IDENTITY_LOOKUP_REJECTED
-                    message: The BVN could not be verified. Check it and try again.
+                    message: Invalid request parameter.
                     errors: []
         '429':
           description: |
@@ -1644,7 +1644,7 @@ paths:
                 rejected:
                   value:
                     code: IDENTITY_LOOKUP_REJECTED
-                    message: The NIN could not be verified. Check it and try again.
+                    message: Invalid request parameter.
                     errors: []
         '429':
           description: |
