@@ -174,7 +174,7 @@ A `NO_MATCH` is a successful response, so it is charged. A request that is refus
 
 ## Look up a NIN
 
-Send the 11-digit NIN. The response is the record on file. To also check details against it, send them in `match`: see [Match details against a NIN](#match-details-against-a-nin).
+Send the 11-digit NIN. The response is the record on file. To also check details against it, send a name, date of birth or mobile number: see [Match details against a NIN](#match-details-against-a-nin).
 
 | Field | Required | Format |
 |---|---|---|
@@ -294,13 +294,13 @@ The NIN comes back masked. `middleName`, `dateOfBirth` and `mobileNumber` are `n
 
 ### Match details against a NIN
 
-Add a `match` object with a name, a date of birth, a mobile number, or any of them, the response is the same record as before, with a `match` added that says how each one compares with it. `match` has the same shape as in a [BVN match](#match-details-against-a-bvn). Only the details you send are compared, and the others are left out of `match`.
+Add a name, a date of birth, a mobile number, or any of them, and the response is the same record as before, with a `match` added that says how each one compares with it. `match` has the same shape as in a [BVN match](#match-details-against-a-bvn). Only the details you send are compared, and the others are left out of `match`.
 
 | Field | Required | Format |
 |---|---|---|
-| `match.name` | No | 2 to 200 characters: letters, spaces, dots, apostrophes and hyphens. Case, punctuation and word order don't affect the match. |
-| `match.dateOfBirth` | No | `YYYY-MM-DD`, in the past |
-| `match.mobileNumber` | No | A Nigerian number: `08107248890`, `2348107248890` or `+2348107248890` |
+| `name` | No | 2 to 200 characters: letters, spaces, dots, apostrophes and hyphens. Case, punctuation and word order don't affect the match. |
+| `dateOfBirth` | No | `YYYY-MM-DD`, in the past |
+| `mobileNumber` | No | A Nigerian number: `08107248890`, `2348107248890` or `+2348107248890` |
 
 ```bash cURL
 curl -X POST https://api.urtentic.com/api/v1/lookups/nin \
@@ -309,11 +309,9 @@ curl -X POST https://api.urtentic.com/api/v1/lookups/nin \
   -H "Content-Type: application/json" \
   -d '{
     "nin": "94646622685",
-    "match": {
-      "name": "BENJAMIN WILES",
-      "dateOfBirth": "1996-10-08",
-      "mobileNumber": "08107248890"
-    }
+    "name": "BENJAMIN WILES",
+    "dateOfBirth": "1996-10-08",
+    "mobileNumber": "08107248890"
   }'
 ```
 
@@ -334,7 +332,7 @@ curl -X POST https://api.urtentic.com/api/v1/lookups/nin \
 }
 ```
 
-The date of birth and the mobile number are either `FULL_MATCH` or `NO_MATCH`. The name is compared word by word, in any order: a middle name left out or a slightly different spelling is a `PARTIAL_MATCH`, with a `score` from 0 to 100. A request with an empty `match` is the same as one without it: no `match` in the response.
+The date of birth and the mobile number are either `FULL_MATCH` or `NO_MATCH`. The name is compared word by word, in any order: a middle name left out or a slightly different spelling is a `PARTIAL_MATCH`, with a `score` from 0 to 100. A request with none of the three has no `match` in the response.
 
 <Note>
 A match is charged like any other lookup, whatever the result.

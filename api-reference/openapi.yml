@@ -599,35 +599,31 @@ components:
       required: [nin]
       description: |
         The NIN and, optionally, details to match against its record. The response is the record on file either
-        way; with `match` it also says how each detail you sent compares, as a BVN match does.
+        way; with any of the details it also says how each detail you sent compares, as a BVN match does.
       properties:
         nin:
           type: string
           pattern: '^\d{11}$'
           description: The 11-digit National Identification Number.
           example: '94646622685'
-        match:
-          type: object
-          description: Details to match. Each is optional and only those you send are compared.
-          properties:
-            name:
-              type: string
-              minLength: 2
-              maxLength: 200
-              description: |
-                The person's full name. Letters, spaces, dots, apostrophes and hyphens only. Case, punctuation and
-                word order don't affect the match.
-              example: BENJAMIN WILES
-            dateOfBirth:
-              type: string
-              format: date
-              description: Date of birth as `YYYY-MM-DD`. Must be in the past.
-              example: '1996-10-08'
-            mobileNumber:
-              type: string
-              pattern: '^(\+?234|0)\d{10}$'
-              description: A Nigerian mobile number, as `08107248890`, `2348107248890` or `+2348107248890`.
-              example: '08107248890'
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+          description: |
+            The person's full name. Letters, spaces, dots, apostrophes and hyphens only. Case, punctuation and
+            word order don't affect the match.
+          example: BENJAMIN WILES
+        dateOfBirth:
+          type: string
+          format: date
+          description: Date of birth as `YYYY-MM-DD`. Must be in the past.
+          example: '1996-10-08'
+        mobileNumber:
+          type: string
+          pattern: '^(\+?234|0)\d{10}$'
+          description: A Nigerian mobile number, as `08107248890`, `2348107248890` or `+2348107248890`.
+          example: '08107248890'
     NinLookupResponse:
       type: object
       properties:
@@ -1603,7 +1599,7 @@ paths:
       description: |
         Returns the name, date of birth, gender and phone number on record for a National Identification Number.
 
-        Send `match` with a name, date of birth, mobile number or any of them to also get, in `match`, how each one
+        Send a name, date of birth, mobile number or any of them to also get, in `match`, how each one
         compares with the record: `FULL_MATCH`, `PARTIAL_MATCH` or `NO_MATCH`, in the same shape as a BVN match.
         Only the details you send are compared. The date of birth and the
         mobile number are `FULL_MATCH` or `NO_MATCH`. The name is compared word by word, in any order: a middle
@@ -1635,10 +1631,9 @@ paths:
                 summary: Details to match
                 value:
                   nin: '94646622685'
-                  match:
-                    name: BENJAMIN WILES
-                    dateOfBirth: '1996-10-08'
-                    mobileNumber: '08107248890'
+                  name: BENJAMIN WILES
+                  dateOfBirth: '1996-10-08'
+                  mobileNumber: '08107248890'
       responses:
         '200':
           description: The lookup was answered. The organization's credits were charged.
