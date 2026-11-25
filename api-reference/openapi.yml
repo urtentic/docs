@@ -529,7 +529,7 @@ components:
     MatchStatus:
       type: string
       enum: [FULL_MATCH, PARTIAL_MATCH, NO_MATCH]
-      description: How one detail you sent compares with what is on record for the BVN.
+      description: How one detail you sent compares with what is on record for the BVN or NIN.
     BvnMatchRequest:
       type: object
       required: [bvn, name, dateOfBirth, mobileNumber]
@@ -558,6 +558,33 @@ components:
           pattern: '^(\+?234|0)\d{10}$'
           description: A Nigerian mobile number, as `08142223149`, `2348142223149` or `+2348142223149`.
           example: '08142223149'
+    LookupMatch:
+      type: object
+      description: |
+        How each detail you sent compares with what is on record. A detail you didn't send is left out.
+        The same for a BVN match and a NIN lookup that sends details to match.
+      properties:
+        name:
+          type: object
+          properties:
+            status:
+              $ref: '#/components/schemas/MatchStatus'
+            score:
+              type: integer
+              minimum: 0
+              maximum: 100
+              nullable: true
+              description: How close the name is, from 0 to 100. `null` when no score is available.
+        dateOfBirth:
+          type: object
+          properties:
+            status:
+              $ref: '#/components/schemas/MatchStatus'
+        mobileNumber:
+          type: object
+          properties:
+            status:
+              $ref: '#/components/schemas/MatchStatus'
     BvnMatchResponse:
       type: object
       properties:
@@ -566,38 +593,41 @@ components:
           description: The BVN with all but the last four digits masked.
           example: '***2226'
         match:
-          type: object
-          properties:
-            name:
-              type: object
-              properties:
-                status:
-                  $ref: '#/components/schemas/MatchStatus'
-                score:
-                  type: integer
-                  minimum: 0
-                  maximum: 100
-                  nullable: true
-                  description: How close the name is, from 0 to 100. `null` when no score is available.
-            dateOfBirth:
-              type: object
-              properties:
-                status:
-                  $ref: '#/components/schemas/MatchStatus'
-            mobileNumber:
-              type: object
-              properties:
-                status:
-                  $ref: '#/components/schemas/MatchStatus'
+          $ref: '#/components/schemas/LookupMatch'
     NinLookupRequest:
       type: object
       required: [nin]
+      description: |
+        The NIN and, optionally, details to match against its record. The response is the record on file either
+        way; with `match` it also says how each detail you sent compares, as a BVN match does.
       properties:
         nin:
           type: string
           pattern: '^\d{11}$'
           description: The 11-digit National Identification Number.
           example: '94646622685'
+        match:
+          type: object
+          description: Details to match. Each is optional and only those you send are compared.
+          properties:
+            name:
+              type: string
+              minLength: 2
+              maxLength: 200
+              description: |
+                The person's full name. Letters, spaces, dots, apostrophes and hyphens only. Case, punctuation and
+                word order don't affect the match.
+              example: BENJAMIN WILES
+            dateOfBirth:
+              type: string
+              format: date
+              description: Date of birth as `YYYY-MM-DD`. Must be in the past.
+              example: '1996-10-08'
+            mobileNumber:
+              type: string
+              pattern: '^(\+?234|0)\d{10}$'
+              description: A Nigerian mobile number, as `08107248890`, `2348107248890` or `+2348107248890`.
+              example: '08107248890'
     NinLookupResponse:
       type: object
       properties:
@@ -629,6 +659,8 @@ components:
           nullable: true
           description: The phone number on record, in international format.
           example: '+2348107248890'
+        match:
+          $ref: '#/components/schemas/LookupMatch'
     LookupCreditsRequired:
       type: object
       description: |
@@ -1488,7 +1520,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BvnResponse'
+                $ref: '#/components/schemas/BvnMatchResponse'
               examples:
                 full_match:
                   value:
@@ -1571,6 +1603,12 @@ paths:
       description: |
         Returns the name, date of birth, gender and phone number on record for a National Identification Number.
 
+        Send `match` with a name, date of birth, mobile number or any of them to also get, in `match`, how each one
+        compares with the record: `FULL_MATCH`, `PARTIAL_MATCH` or `NO_MATCH`, in the same shape as a BVN match.
+        Only the details you send are compared. The date of birth and the
+        mobile number are `FULL_MATCH` or `NO_MATCH`. The name is compared word by word, in any order: a middle
+        name left out or a slightly different spelling is a `PARTIAL_MATCH`, and its `score` is from 0 to 100.
+
         ### Billing
         Every successful response is charged to the organization's credits, the same on a plan
         and with no plan. The price is on the Billing page of the dashboard.
@@ -1590,17 +1628,27 @@ paths:
               $ref: '#/components/schemas/NinLookupRequest'
             examples:
               request:
+                summary: The record on file
                 value:
                   nin: '94646622685'
+              match:
+                summary: Details to match
+                value:
+                  nin: '94646622685'
+                  match:
+                    name: BENJAMIN WILES
+                    dateOfBirth: '1996-10-08'
+                    mobileNumber: '08107248890'
       responses:
         '200':
           description: The lookup was answered. The organization's credits were charged.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NinResponse'
+                $ref: '#/components/schemas/NinLookupResponse'
               examples:
                 record:
+                  summary: Without details to match
                   value:
                     nin: '***2685'
                     firstName: BENJAMIN
@@ -1609,6 +1657,20 @@ paths:
                     dateOfBirth: '1996-10-08'
                     gender: OTHER
                     mobileNumber: '+2348107248890'
+                match:
+                  summary: With details to match
+                  value:
+                    nin: '***2685'
+                    firstName: BENJAMIN
+                    middleName: CHUKS
+                    lastName: WILES
+                    dateOfBirth: '1996-10-08'
+                    gender: OTHER
+                    mobileNumber: '+2348107248890'
+                    match:
+                      name: { status: PARTIAL_MATCH, score: 80 }
+                      dateOfBirth: { status: FULL_MATCH }
+                      mobileNumber: { status: FULL_MATCH }
         '400':
           description: A field is missing or invalid. Nothing was charged. `errors` lists a message per invalid field.
           content:
